@@ -933,18 +933,39 @@ public abstract class FSUtils {
       this.fs = fs;
     }
 
+    @Override
     public boolean accept(Path p) {
+      return checkIsDirectory(fs, p);
+    }
+
+    public static boolean checkIsDirectory(FileSystem fs, Path p) {
       boolean isValid = false;
       try {
         if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
           isValid = false;
         } else {
-            isValid = this.fs.getFileStatus(p).isDir();
+          isValid = fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
         e.printStackTrace();
       }
       return isValid;
+    }
+  }
+
+  /**
+   * Filter out paths that are hidden (start with '.') and are not directories.
+   */
+  public static class VisibleDirectory implements PathFilter {
+    private final FileSystem fs;
+
+    public VisibleDirectory(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path file) {
+      return DirFilter.checkIsDirectory(fs, file) && !file.getName().toString().startsWith(".");
     }
   }
 
