@@ -15,28 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master.snapshot.manage;
+package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
-import org.apache.hadoop.hbase.master.snapshot.TableSnapshotHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.Aborting;
+import org.apache.hadoop.hbase.server.commit.distributed.controller.DistributedCommitCoordinatorController;
+import org.apache.hadoop.hbase.server.commit.distributed.coordinator.DistributedThreePhaseCommitCoordinator;
+import org.apache.hadoop.hbase.server.commit.distributed.zookeeper.ZKTwoPhaseCommitCoordinatorController;
 import org.apache.hadoop.hbase.server.errorhandling.impl.ExceptionOrchestrator;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorListener;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorMonitorFactory;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotFailureListener;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -44,8 +45,8 @@ import org.apache.zookeeper.KeeperException;
  * SnapshotMonitor for the master.
  * <p>
  * Start monitoring a snapshot by calling method monitor() before the snapshot is started across the
- * cluster via ZooKeeper. SnapshotMonitor would stop monitoring this snapshot only if it is finished
- * or aborted.
+ * cluster via a {@link DistributedCommitCoordinatorController}. SnapshotMonitor would stop
+ * monitoring this snapshot only if it is finished or aborted.
  * <p>
  * Note: There could be only one snapshot being processed and monitored at a time over the cluster.
  * Start monitoring a snapshot only when the previous one reaches an end status.
@@ -54,18 +55,58 @@ import org.apache.zookeeper.KeeperException;
 public class SnapshotManager extends Aborting {
   private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
 
-  // TODO - enable having multiple snapshots with multiple monitors
+  /** By default, check to see if the snapshot is complete (ms) */
+  public static final int DEFAULT_MAX_WAIT_FREQUENCY = 500;
 
+  /** Conf key for frequency to check for snapshot error while waiting for completion */
+  public static final String MASTER_MAX_WAKE_FREQUENCY_KEY = "hbase.snapshot.master.wakeFrequency";
+
+  /** By default, check to see if the snapshot is complete (ms) */
+  public static final int DEFAULT_MAX_THREAD_KEEP_ALIVE = 5000;
+
+  /** Conf key for frequency to check for snapshot error while waiting for completion */
+  public static final String MASTER_MAX_THREAD_KEEP_ALIVE_TIME_KEY = "hbase.snapshot.master.wakeFrequency";
+
+  // TODO - enable having multiple snapshots with multiple monitors/threads
+  // this needs to be configuration based when running multiple snapshots is implemented
+  /** number of current operations running on the master */
+  private static final int opThreads = 1;
+
+  private final long wakeFrequency;
   private final MasterServices master;
-  private SnapshotErrorMonitorFactory errorFactory;
+  private final SnapshotErrorMonitorFactory errorFactory;
   private final ExceptionOrchestrator<HBaseSnapshotException> dispatcher;
+  private final DistributedThreePhaseCommitCoordinator coordinator;
   private TableSnapshotHandler handler;
 
-  public SnapshotManager(final MasterServices master, final ZooKeeperWatcher watcher)
-      throws KeeperException {
+  /**
+   * Create a server manager with a {@link ZKTwoPhaseCommitCoordinatorController} as the
+   * {@link DistributedCommitCoordinatorController}.
+   * @param master parent hosting <tt>this</tt>
+   * @throws KeeperException if we can't reach the zookeeper cluster
+   */
+  public SnapshotManager(final MasterServices master) throws KeeperException {
+    this(master, new ZKTwoPhaseCommitCoordinatorController(master.getZooKeeper(),
+        HConstants.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, master.getServerName().toString()));
+  }
+
+  public SnapshotManager(final MasterServices master,
+      DistributedCommitCoordinatorController controller) throws KeeperException {
     this.master = master;
+
+    // setup the error handling
     this.errorFactory = new SnapshotErrorMonitorFactory();
     this.dispatcher = errorFactory.getHub();
+
+    // get the configuration for the coordinator
+    Configuration conf = master.getConfiguration();
+    this.wakeFrequency = conf.getInt(MASTER_MAX_WAKE_FREQUENCY_KEY, DEFAULT_MAX_WAIT_FREQUENCY);
+    long keepAliveTime = conf.getLong(MASTER_MAX_THREAD_KEEP_ALIVE_TIME_KEY,
+      DEFAULT_MAX_THREAD_KEEP_ALIVE);
+
+    this.coordinator = new DistributedThreePhaseCommitCoordinator(
+        master.getServerName().toString(), keepAliveTime, opThreads, wakeFrequency, controller,
+        null);
   }
 
   /**
@@ -74,6 +115,17 @@ public class SnapshotManager extends Aborting {
    */
   public boolean isInProcess() throws SnapshotCreationException {
     return handler != null && !handler.getFinished();
+  }
+
+  public synchronized OnlineTableSnapshotHandler newOnlineTableSnasphotHandler(
+      SnapshotDescription snapshot, Server parent) throws IOException {
+    // create a monitor for snapshot errors
+    SnapshotErrorListener monitor = this.errorFactory.createMonitorForSnapshot(snapshot);
+
+    OnlineTableSnapshotHandler handler = new OnlineTableSnapshotHandler(snapshot, parent,
+        this.master, monitor, this, wakeFrequency);
+    this.handler = handler;
+    return handler;
   }
 
   public synchronized DisabledTableSnapshotHandler newDisabledTableSnasphotHandler(
@@ -146,9 +198,17 @@ public class SnapshotManager extends Aborting {
   /**
    * EXPOSED FOR TESTING.
    * @return the {@link ExceptionOrchestrator} that updates all running {@link TableSnapshotHandler}
-   *         in the even of a n abort.
+   *         in the even of an abort.
    */
   ExceptionOrchestrator<HBaseSnapshotException> getExceptionOrchestrator() {
     return this.dispatcher;
+  }
+
+  /**
+   * EXPOSED FOR TESTING
+   * @return distributed commit coordinator for all running snapshots
+   */
+  DistributedThreePhaseCommitCoordinator getCoordinator() {
+    return coordinator;
   }
 }
