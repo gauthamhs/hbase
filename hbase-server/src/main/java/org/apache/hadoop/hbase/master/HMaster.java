@@ -100,8 +100,8 @@ import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotCleaner;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.master.snapshot.TableSnapshotHandler;
-import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -566,7 +566,7 @@ Server {
     // an interface? MasterFileSystem seems to mostly what it needs
     // manager does its down event tracking via the internal monitor, so we don't
     // need to incldue a special event handler
-    this.snapshotManager = new SnapshotManager(this, zooKeeper);
+    this.snapshotManager = new SnapshotManager(this);
   }
 
   /**
@@ -2376,8 +2376,7 @@ Server {
       // if the table is online, then have the RS handle the snapshots
       if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
         LOG.debug("Table enabled, starting distributed snapshot.");
-        throw new ServiceException(new UnsupportedOperationException(
-            "Online table snapshots are not yet supported"));
+        handler = snapshotManager.newOnlineTableSnasphotHandler(snapshot, this);
       }
       // For disabled table, snapshot is created by the master
       else if (this.assignmentManager.getZKTable().isDisabledTable(snapshot.getTable())) {
@@ -2393,8 +2392,7 @@ Server {
     this.executorService.submit(handler);
     LOG.debug("Started snapshot: " + snapshot);
     // set the amount of time the client should wait
-    long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
-      SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+    long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType());
     return TakeSnapshotResponse.newBuilder().setExpectedTime(waitTime).build();
   }
 
