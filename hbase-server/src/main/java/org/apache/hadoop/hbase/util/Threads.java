@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -30,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.server.errorhandling.ExceptionCheckable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
@@ -199,5 +201,48 @@ public class Threads {
         return new Thread(r, prefix + threadNumber.getAndIncrement());
       }
     };
+  }
+
+  /**
+   * Wait for latch to count to zero, ignoring any spurious wake-ups, but waking periodically to
+   * check for errors
+   * @param latch latch to wait on
+   * @param monitor monitor to check for errors while waiting
+   * @param wakeFrequency frequency to wake up and check for errors (in
+   *          {@link TimeUnit#MILLISECONDS})
+   * @param latchDescription description of the latch, for logging
+   * @throws E type of error the monitor can throw, if the task fails
+   * @throws InterruptedException if we are interrupted while waiting on latch
+   */
+  public static <E extends Exception> void waitForLatch(CountDownLatch latch,
+      ExceptionCheckable<E> monitor, long wakeFrequency, String latchDescription) throws E,
+      InterruptedException {
+    boolean released = false;
+    while (!released) {
+      if (monitor != null) monitor.failOnError();
+        LOG.debug("Waiting for '" + latchDescription + "' latch. (sleep:" + wakeFrequency + " ms)");
+        released = latch.await(wakeFrequency, TimeUnit.MILLISECONDS);
+    }
+  }
+
+  /**
+   * Wait for latch to count to zero, ignoring any spurious wake-ups, but waking periodically to
+   * check for errors
+   * @param latch latch to wait on
+   * @param monitor monitor to check for errors while waiting
+   * @param wakeFrequency frequency to wake up and check for errors (in
+   *          {@link TimeUnit#MILLISECONDS})
+   * @param latchDescription description of the latch, for logging
+   * @throws E type of error the monitor can throw, if the task fails
+   */
+  public static <E extends Exception> void waitForLatchUninterruptibly(CountDownLatch latch,
+      ExceptionCheckable<E> monitor, long wakeFrequency, String latchDescription) throws E {
+    try {
+      waitForLatch(latch, monitor, wakeFrequency, latchDescription);
+    } catch (InterruptedException e) {
+      LOG.debug("Wait for latch interrupted, done:" + (latch.getCount() == 0));
+      // reset the interrupt status on the thread
+      Thread.currentThread().interrupt();
+    }
   }
 }

@@ -35,6 +35,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Random;
@@ -114,13 +115,21 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.SwapStores.FlushAndSwapBack;
+import org.apache.hadoop.hbase.regionserver.SwapStores.SwapForTimeParitionedStore;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
+import org.apache.hadoop.hbase.regionserver.snapshot.operation.RegionSnapshotOperationStatus;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.server.errorhandling.ExceptionCheckable;
+import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
+import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -293,6 +302,8 @@ public class HRegion implements HeapSize { // , Writable{
     volatile boolean writesEnabled = true;
     // Set if region is read-only
     volatile boolean readOnly = false;
+    // Set if snapshot is running
+    volatile boolean snapshot = false;
 
     /**
      * Set flags that make this region read-only.
@@ -332,7 +343,7 @@ public class HRegion implements HeapSize { // , Writable{
     new ReentrantReadWriteLock();
 
   // Stop updates lock
-  private final ReentrantReadWriteLock updatesLock =
+  final ReentrantReadWriteLock updatesLock =
     new ReentrantReadWriteLock();
   private boolean splitRequest;
   private byte[] explicitSplitPoint = null;
@@ -727,27 +738,49 @@ public class HRegion implements HeapSize { // , Writable{
     return this.memstoreSize.getAndAdd(memStoreSize);
   }
 
-  /*
-   * Write out an info file under the region directory.  Useful recovering
-   * mangled regions.
+  /**
+   * Write out an info file under the stored region directory. Useful recovering mangled regions.
    * @throws IOException
    */
   private void checkRegioninfoOnFilesystem() throws IOException {
-    Path regioninfoPath = new Path(this.regiondir, REGIONINFO_FILE);
-    // Compose the content of the file so we can compare to length in filesystem.  If not same,
-    // rewrite it (it may have been written in the old format using Writables instead of pb).  The
+    checkRegioninfoOnFilesystem(this.regiondir);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions.
+   * @param regiondir directory under which to write out the region info
+   * @throws IOException
+   */
+  private void checkRegioninfoOnFilesystem(Path regiondir) throws IOException {
+    writeRegioninfoOnFilesystem(regionInfo, regiondir, getFilesystem(), conf);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions. If the
+   * regioninfo already exists on disk and there is information in the file, then we fast exit.
+   * @param regionInfo information about the region
+   * @param regiondir directory underwhich to write out the region info
+   * @param fs {@link FileSystem} on which to write the region info
+   * @param conf {@link Configuration} from which to extract specific file locations
+   * @throws IOException on unexepcted error.
+   */
+  public static void writeRegioninfoOnFilesystem(HRegionInfo regionInfo, Path regiondir,
+      FileSystem fs, Configuration conf) throws IOException {
+    Path regioninfoPath = new Path(regiondir, REGIONINFO_FILE);
+    // Compose the content of the file so we can compare to length in filesystem. If not same,
+    // rewrite it (it may have been written in the old format using Writables instead of pb). The
     // pb version is much shorter -- we write now w/o the toString version -- so checking length
-    // only should be sufficient.  I don't want to read the file every time to check if it pb
+    // only should be sufficient. I don't want to read the file every time to check if it pb
     // serialized.
-    byte [] content = getDotRegionInfoFileContent(this.getRegionInfo());
-    boolean exists = this.fs.exists(regioninfoPath);
-    FileStatus status = exists? this.fs.getFileStatus(regioninfoPath): null;
+    byte[] content = getDotRegionInfoFileContent(regionInfo);
+    boolean exists = fs.exists(regioninfoPath);
+    FileStatus status = exists ? fs.getFileStatus(regioninfoPath) : null;
     if (status != null && status.getLen() == content.length) {
       // Then assume the content good and move on.
       return;
     }
     // Create in tmpdir and then move into place in case we crash after
-    // create but before close.  If we don't successfully close the file,
+    // create but before close. If we don't successfully close the file,
     // subsequent region reopens will fail the below because create is
     // registered in NN.
 
@@ -755,7 +788,7 @@ public class HRegion implements HeapSize { // , Writable{
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
 
     // And then create the file
-    Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
+    Path tmpPath = new Path(getTmpDir(regiondir), REGIONINFO_FILE);
 
     // If datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
@@ -1205,7 +1238,11 @@ public class HRegion implements HeapSize { // , Writable{
    * will have its contents removed when the region is reopened.
    */
   Path getTmpDir() {
-    return new Path(getRegionDir(), REGION_TEMP_SUBDIR);
+    return getTmpDir(getRegionDir());
+  }
+
+  static Path getTmpDir(Path regionDir) {
+    return new Path(regionDir, REGION_TEMP_SUBDIR);
   }
 
   void triggerMajorCompaction() {
@@ -1451,71 +1488,80 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * @param wal Null if we're NOT to go via hlog/wal.
-   * @param myseqid The seqid to use if <code>wal</code> is null writing out
-   * flush file.
+   * @param myseqid The seqid to use if <code>wal</code> is null writing out flush file.
    * @param status
    * @return true if the region needs compacting
    * @throws IOException
    * @see #internalFlushcache(MonitoredTask)
    */
-  protected boolean internalFlushcache(
-      final HLog wal, final long myseqid, MonitoredTask status)
-  throws IOException {
+  protected boolean internalFlushcache(final HLog wal, final long myseqid, MonitoredTask status)
+      throws IOException {
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
     // Clear flush flag.
     // Record latest flush time
     this.lastFlushTime = startTime;
-    // If nothing to flush, return and avoid logging start/stop flush.
+    // If nothing to flush return and avoid logging
+    // start/stop flush.
     if (this.memstoreSize.get() <= 0) {
       return false;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Started memstore flush for " + this +
-        ", current region memstore size " +
-        StringUtils.humanReadableInt(this.memstoreSize.get()) +
-        ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
+      LOG.debug("Started memstore flush for " + this + ", current region memstore size "
+          + StringUtils.humanReadableInt(this.memstoreSize.get())
+          + ((wal != null) ? "" : "; wal is null, using passed sequenceid=" + myseqid));
     }
 
     // Stop updates while we snapshot the memstore of all stores. We only have
-    // to do this for a moment.  Its quick.  The subsequent sequence id that
+    // to do this for a moment. Its quick. The subsequent sequence id that
     // goes into the HLog after we've flushed all these snapshots also goes
     // into the info file that sits beside the flushed files.
     // We also set the memstore size to zero here before we allow updates
     // again so its value will represent the size of the updates received
     // during the flush
     long sequenceId = -1L;
+    long completeSequenceId = -1L;
     MultiVersionConsistencyControl.WriteEntry w = null;
 
     // We have to take a write lock during snapshot, or else a write could
     // end up in both snapshot and memstore (makes it difficult to do atomic
     // rows then)
-    status.setStatus("Obtaining lock to block concurrent updates");
-    this.updatesLock.writeLock().lock();
-    long flushsize = this.memstoreSize.get();
-    status.setStatus("Preparing to flush by snapshotting stores");
+    String msg = "Obtaining lock to block concurrent updates";
+    status.setStatus(msg);
+    LOG.debug(msg);
+
     List<StoreFlusher> storeFlushers = new ArrayList<StoreFlusher>(stores.size());
-    long completeSeqId = -1L;
+
+    // prepare the cache flush
+    PrepareMemStoreFlushOperator flush = new PrepareMemStoreFlushOperator(this, status, myseqid,
+        mvcc);
     try {
-      // Record the mvcc for all transactions in progress.
-      w = mvcc.beginMemstoreInsert();
-      mvcc.advanceMemstore(w);
-
-      sequenceId = (wal == null)? myseqid:
-        wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
-      completeSeqId = this.getCompleteCacheFlushSequenceId(sequenceId);
-      for (Store s : stores.values()) {
-        storeFlushers.add(s.getStoreFlusher(completeSeqId));
-      }
-
-      // prepare flush (take a snapshot)
-      for (StoreFlusher flusher : storeFlushers) {
-        flusher.prepare();
-      }
-    } finally {
-      this.updatesLock.writeLock().unlock();
+      this.operateOnStores(flush);
+    } catch (Throwable t) {
+      failFlushMemstore(t, wal, status);
     }
-    String s = "Finished snapshotting " + this +
-      ", commencing wait for mvcc, flushsize=" + flushsize;
+
+    // get the general flush state
+    w = flush.w;
+    completeSequenceId = flush.completeSequenceId;
+    sequenceId = flush.sequenceId;
+    long flushsize = flush.flushSize;
+
+    // get the prepared store flushers
+    Collection<Pair<StoreFlusher, Boolean>> flushers = flush.flushers;
+    for (Pair<StoreFlusher, Boolean> flusher : flushers) {
+      storeFlushers.add(flusher.getFirst());
+    }
+
+    // finish the rest of the flushing outside of the lock
+    return finishFlushcache(storeFlushers, flushsize, w, wal, completeSequenceId, sequenceId,
+      startTime, status);
+  }
+
+  private boolean finishFlushcache(List<StoreFlusher> storeFlushers, long flushsize,
+      MultiVersionConsistencyControl.WriteEntry w, HLog wal, long completeSequenceId,
+      long sequenceId, long startTime, MonitoredTask status) throws IOException {
+    String s = "Finished preparing memstore for flush on " + this
+        + ", commencing wait for mvcc, flushsize=" + flushsize;
     status.setStatus(s);
     LOG.debug(s);
 
@@ -1527,7 +1573,7 @@ public class HRegion implements HeapSize { // , Writable{
     mvcc.waitForRead(w);
 
     status.setStatus("Flushing stores");
-    LOG.debug("Finished snapshotting, commencing flushing stores");
+    LOG.debug("Finished snapshotting memstore, commencing flush.");
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so hlog content can be replayed and put back into the memstore.
@@ -1552,25 +1598,11 @@ public class HRegion implements HeapSize { // , Writable{
           compactionRequested = true;
         }
       }
-      storeFlushers.clear();
 
       // Set down the memstore size by amount of flush.
       this.addAndGetGlobalMemstoreSize(-flushsize);
     } catch (Throwable t) {
-      // An exception here means that the snapshot was not persisted.
-      // The hlog needs to be replayed so its content is restored to memstore.
-      // Currently, only a server restart will do this.
-      // We used to only catch IOEs but its possible that we'd get other
-      // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
-      // all and sundry.
-      if (wal != null) {
-        wal.abortCacheFlush(this.regionInfo.getEncodedNameAsBytes());
-      }
-      DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
-          Bytes.toStringBinary(getRegionName()));
-      dse.initCause(t);
-      status.abort("Flush failed: " + StringUtils.stringifyException(t));
-      throw dse;
+      failFlushMemstore(t, wal, status);
     }
 
     // If we get to here, the HStores have been written. If we get an
@@ -1582,13 +1614,9 @@ public class HRegion implements HeapSize { // , Writable{
     //     log-sequence-ids can be safely ignored.
     if (wal != null) {
       wal.completeCacheFlush(this.regionInfo.getEncodedNameAsBytes(),
-        regionInfo.getTableName(), completeSeqId,
+ regionInfo.getTableName(),
+        completeSequenceId,
         this.getRegionInfo().isMetaRegion());
-    }
-
-    // Update the last flushed sequence id for region
-    if (this.rsServices != null) {
-      completeSequenceId = completeSeqId;
     }
 
     // C. Finally notify anyone waiting on memstore to clear:
@@ -1611,6 +1639,31 @@ public class HRegion implements HeapSize { // , Writable{
     this.recentFlushes.add(new Pair<Long,Long>(time/1000, flushsize));
 
     return compactionRequested;
+  }
+
+  /**
+   * Throw an exception after unwinding any state (release locks, etc) from a failed attempt to
+   * flush the memstore
+   * @param t exception thrown when attempting the flush.
+   * @param wal {@link HLog} for the region
+   * @param status status monitoring the running flush
+   */
+  private <T extends Throwable> void failFlushMemstore(T t, HLog wal, MonitoredTask status)
+      throws DroppedSnapshotException {
+    // An exception here means that the snapshot was not persisted.
+    // The hlog needs to be replayed so its content is restored to memstore.
+    // Currently, only a server restart will do this.
+    // We used to only catch IOEs but its possible that we'd get other
+    // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
+    // all and sundry.
+    if (wal != null) {
+      wal.abortCacheFlush(this.regionInfo.getEncodedNameAsBytes());
+    }
+    DroppedSnapshotException dse = new DroppedSnapshotException("region: "
+        + Bytes.toStringBinary(getRegionName()));
+    dse.initCause(t);
+    status.abort("Flush failed: " + StringUtils.stringifyException(t));
+    throw dse;
   }
 
    /**
@@ -2495,10 +2548,240 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  /**
+   * Complete taking the snapshot on the region. Writes the region info and adds references to the
+   * working snapshot directory.
+   * @param desc snapshot being completed
+   * @param failureMonitor to monitor for external failures
+   * @throws IOException if there is an external or internal error causing the snapshot to fail
+   */
+  public void addRegionToSnapshot(SnapshotDescription desc,
+      ExceptionCheckable<HBaseSnapshotException> failureMonitor) throws IOException {
+    // This should be "fast" since we don't rewrite store files but instead
+    // back up the store files by creating a reference
+    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(desc, rootDir,
+      regionInfo.getEncodedName());
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    checkRegioninfoOnFilesystem(snapshotRegionDir);
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    for (Store store : stores.values()) {
+      // build the snapshot reference directory for the store
+      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
+        Bytes.toString(store.getFamily().getName()));
+      List<StoreFile> storeFiles = store.getStorefiles();
+      if (LOG.isDebugEnabled()) LOG.debug("Adding snapshot references for " + storeFiles
+          + " hfiles");
+      // TODO consider moving this over to a single file with all the names of the store files
+      for (int i = 0; i < storeFiles.size(); i++) {
+        failureMonitor.failOnError();
+        Path file = storeFiles.get(i).getPath();
+        // 2.3. create "reference" to this store file
+        LOG.debug("(" + i + ") Creating reference for file:" + file);
+        TakeSnapshotUtils.createReference(fs, conf, file, dstStoreDir);
+      }
+    }
+  }
 
   /**
-   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP}
-   * with the provided current timestamp.
+   * Take a snapshot of the memstore based on the given timestamp.
+   * <p>
+   * Interally, splits writes (based on timestamp) between the snapshot memstore (up to the split
+   * time) and the 'primary' memstore.
+   * <p>
+   * This is the first part of a timestamp-consistent snapshot of a table (at least on the
+   * region-level). See
+   * {@link #completeTimestampConsistentSnapshot(SnapshotDescription, long, long, RegionSnapshotOperationStatus, ErrorCheckable, MonitoredTask)}
+   * for the second half of the region operation: flushing the in-memory state.
+   * @param snapshot snapshot to take
+   * @param splitPoint timestamp to decide if writes should go into the snapshot or the primary
+   *          memstore
+   * @param timeout amount of time to wait before flushing store
+   * @param errorMonitor monitor to check for snapshot errors
+   * @param status region status to update with progress info
+   * @return a {@link Pair} of the sequenceId of the start of the cache flush (of the HLog) and the
+   *         start time, respectively
+   * @throws IOException if the snapshot fails at any point
+   */
+  public Pair<Long, Long> startTimestampConsistentSnapshot(final SnapshotDescription snapshot,
+      final long splitPoint, final long timeout,
+      ExceptionCheckable<HBaseSnapshotException> errorMonitor, MonitoredTask status)
+      throws IOException {
+    // indicate that we are doing a snapshot
+    synchronized (writestate) {
+      // if we are doing a snapshot already, then don't do anything
+      if (writestate.snapshot) {
+        throw new SnapshotCreationException("Snapshot already running, aborting.");
+      }
+      writestate.snapshot = true;
+    }
+
+    // start of the snapshot flush = very beginning (though we don't apply the
+    // flush till slightly later)
+    final long startTime = EnvironmentEdgeManager.currentTimeMillis();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting timestamp consistent snapshot for " + this
+          + ", current region memstore size "
+          + StringUtils.humanReadableInt(this.memstoreSize.get()));
+    }
+
+    // make sure we didn't get an error
+    errorMonitor.failOnError();
+
+    // The subsequent sequence id that goes into the HLog after we've flushed all these snapshots
+    // also goes into the info file that sits beside the flushed files. We also set the memstore
+    // size to zero here before we allow updates again so its value will represent the size of the
+    // updates received during the flush.
+    long sequenceId = -1L;
+
+    // Stop updates while we snapshot the memstore of all stores. We only have to do this for a
+    // moment. Its quick. This lets us swap out the stores so we can funnel writes to the correct
+    // memstore. We have to take a write lock during snapshot, or else a write could end up in both
+    // snapshot and memstore (makes it difficult to do atomic rows then). Also guarrantees that we
+    // aren't messing with the stores during this switch over.
+    // since we are locked on writes, we can switch the stores for our special
+    // snapshot, write splitting stores
+    SwapForTimeParitionedStore swap = new SwapForTimeParitionedStore(this, status, splitPoint);
+    operateOnStores(swap);
+    // get the info back from the operation that we care about
+    sequenceId = swap.sequenceId;
+
+    // wait for the swap timeout to expire, but allow writes to preceed normally
+    // while we are waiting
+    String msg = "Swapped memstores for timestamp snapshot memstores, waiting for flush latch to expire";
+    LOG.debug(msg);
+    status.setStatus(msg);
+    return new Pair<Long, Long>(sequenceId, startTime);
+  }
+
+  /**
+   * Complete the timestamp based snapshot by flushing the store and then swapping back in the
+   * normal (non-partitioning) {@link HStore}.
+   * @see #startTimestampConsistentSnapshot(SnapshotDescription, long, long, ErrorCheckable,
+   *      MonitoredTask)
+   * @param snapshot Snapshot being taken
+   * @param sequenceId sequence ID of the start of the snapshot
+   * @param startTime time the snapshot was started
+   * @param progressMonitor monitor to update with our progess
+   * @param errorMonitor monitor for check for errors
+   * @param status monitor to update the server and user of our progress
+   * @throws IOException if an unexpected error occurs
+   */
+  public void completeTimestampConsistentSnapshot(final SnapshotDescription snapshot,
+      final long sequenceId, final long startTime, RegionSnapshotOperationStatus progressMonitor,
+      ExceptionCheckable<HBaseSnapshotException> errorMonitor, MonitoredTask status)
+      throws IOException {
+    status.setStatus("Snapshot write-splitting completed, obtaining lock to"
+        + "block concurrent updates and swap back memstores.");
+
+    LOG.debug("Swapping back stores and creating " + stores.size() + " store flushers.");
+    FlushAndSwapBack operator = new FlushAndSwapBack(this, this.mvcc, sequenceId);
+    operateOnStores(operator);
+
+    // get the store info from the completed operator
+    long flushsize = operator.flushSize;
+    List<StoreFlusher> storeFlushers = operator.flushers;
+    MultiVersionConsistencyControl.WriteEntry w = operator.w;
+    long completeSequenceId = operator.completeSequenceId;
+
+    if (status != null) status.setStatus("Swapped back memstores (new total:" + this.stores.size()
+        + ") and unlocked. Flushing cache to complete snapshot.");
+
+    finishFlushcache(storeFlushers, flushsize, w, this.log, completeSequenceId, Long.MIN_VALUE,
+      startTime, status);
+    if (status != null) status.setStatus("Prepared snapshot, waiting to commit");
+  }
+
+  /**
+   * Run an operation on all the current stores. If an exception if thrown for any of the stores,
+   * the remaining stores are <b>not</b> going to modified and {@link StoreOperator#finish()} will
+   * be called immediately.
+   * @param op operation to apply to each {@link HStore}
+   * @throws E exception that the operation can throw.
+   */
+  public <E extends Exception> void operateOnStores(StoreOperator<E> op) throws E {
+    // short circuit if we have nothing to do
+    if (op == null) return;
+
+    try {
+      LOG.debug("Running store operation:" + op);
+      op.prepare();
+      for (Entry<byte[], Store> e : this.stores.entrySet()) {
+        LOG.debug("Operating on store for cf:" + Bytes.toString(e.getKey()));
+        op.operateOnStore(e.getValue());
+      }
+    } finally {
+      LOG.debug("Finishing store operation");
+      op.finish();
+    }
+  }
+
+  /**
+   * Cleanup region state after a completed (sucessful or not) region snapshot
+   */
+  public void restoreRegionAfterTimestampSnapshot() {
+    this.writestate.snapshot = false;
+  }
+
+  /**
+   * Complete taking the snapshot on the region. Writes the region info and adds references to the
+   * working snapshot directory.
+   * @param desc snapshot being completed
+   * @param failureMonitor to monitor for external failures
+   * @throws IOException if there is an external or internal error causing the snapshot to fail
+   */
+  public void addRegionToSnapshot(SnapshotDescription desc,
+      ExceptionCheckable<HBaseSnapshotException> failureMonitor) throws IOException {
+    // This should be "fast" since we don't rewrite store files but instead
+    // back up the store files by creating a reference
+    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(desc, rootDir,
+      regionInfo.getEncodedName());
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    checkRegioninfoOnFilesystem(snapshotRegionDir);
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    for (Store store : stores.values()) {
+      // build the snapshot reference directory for the store
+      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
+        Bytes.toString(store.getFamily().getName()));
+      List<StoreFile> storeFiles = store.getStorefiles();
+      if (LOG.isDebugEnabled()) LOG.debug("Adding snapshot references for " + storeFiles
+          + " hfiles");
+      // TODO consider moving this over to a single file with all the names of the store files
+      for (int i = 0; i < storeFiles.size(); i++) {
+        failureMonitor.failOnError();
+        Path file = storeFiles.get(i).getPath();
+        // 2.3. create "reference" to this store file
+        LOG.debug("(" + i + ") Creating reference for file:" + file);
+        TakeSnapshotUtils.createReference(fs, conf, file, dstStoreDir);
+      }
+    }
+  }
+
+  /**
+   * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP} with the provided current
+   * timestamp.
    */
   void updateKVTimestamps(
       final Iterable<List<KeyValue>> keyLists, final byte[] now) {

@@ -38,6 +38,7 @@ message Reference {
   enum Range {
     TOP = 0;
     BOTTOM = 1;
+    WHOLE = 2;
   }
   required Range range = 2;
 }
