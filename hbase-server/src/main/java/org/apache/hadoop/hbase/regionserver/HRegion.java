@@ -123,6 +123,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.OperationMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.RegionMetricsStorage;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.snapshot.operation.RegionSnapshotOperationStatus;
+import org.apache.hadoop.hbase.regionserver.snapshot.operation.GlobalRegionSnapshotProgressMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -2549,47 +2550,111 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Complete taking the snapshot on the region. Writes the region info and adds references to the
-   * working snapshot directory.
-   * @param desc snapshot being completed
-   * @param failureMonitor to monitor for external failures
-   * @throws IOException if there is an external or internal error causing the snapshot to fail
+   * Start a globally-consistent snapshot on this region.
+   * <p>
+   * Periodically checks to make sure the region hasn't been notified of a failure in the global
+   * snapshot process. If it has, it bails out.
+   * <p>
+   * WriteState.snapshot is set to true and WriteState.writesEnabled is set to false so region
+   * compaction and flush is disabled during the process of snapshot.
+   * @param desc {@link SnapshotDescription} describing the snapshot to take
+   * @param monitor to update/monitor progress on the snapshot
+   * @param failureMonitor check failure of the overall snapshot
+   * @throws IOException if the snapshot could not be made
    */
-  public void addRegionToSnapshot(SnapshotDescription desc,
+  public void startGloballyConsistentSnapshot(SnapshotDescription desc,
+      GlobalRegionSnapshotProgressMonitor monitor,
       ExceptionCheckable<HBaseSnapshotException> failureMonitor) throws IOException {
-    // This should be "fast" since we don't rewrite store files but instead
-    // back up the store files by creating a reference
-    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
-    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(desc, rootDir,
-      regionInfo.getEncodedName());
 
-    // 1. dump region meta info into the snapshot directory
-    LOG.debug("Storing region-info for snapshot.");
-    checkRegioninfoOnFilesystem(snapshotRegionDir);
+    LOG.debug("Snapshot is started on " + this);
+    MonitoredTask status = TaskMonitor.get().createStatus("Snapshotting " + this);
 
-    // 2. iterate through all the stores in the region
-    LOG.debug("Creating references for hfiles");
+    // periodically, check for snapshot failures, so we don't waste extra work
+    // for the snapshot and resume as fast as possible
+    try {
+      // 0. lock the region to make sure we don't get anymore writes/close/flush
+      // mid-snapshot.
+      // checkResources();
+      startRegionOperation();
 
-    // This ensures that we have an atomic view of the directory as long as we have < ls limit
-    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
-    // batches and may miss files being added/deleted. This could be more robust (iteratively
-    // checking to see if we have all the files until we are sure), but the limit is currently 1000
-    // files/batch, far more than the number of store files under a single column family.
-    for (Store store : stores.values()) {
-      // build the snapshot reference directory for the store
-      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
-        Bytes.toString(store.getFamily().getName()));
-      List<StoreFile> storeFiles = store.getStorefiles();
-      if (LOG.isDebugEnabled()) LOG.debug("Adding snapshot references for " + storeFiles
-          + " hfiles");
-      // TODO consider moving this over to a single file with all the names of the store files
-      for (int i = 0; i < storeFiles.size(); i++) {
-        failureMonitor.failOnError();
-        Path file = storeFiles.get(i).getPath();
-        // 2.3. create "reference" to this store file
-        LOG.debug("(" + i + ") Creating reference for file:" + file);
-        TakeSnapshotUtils.createReference(fs, conf, file, dstStoreDir);
+      // Stop updates while we take a snapshot of the current hfiles. We only
+      // have to do this for a moment - Its quick (kinda).
+      MultiVersionConsistencyControl.WriteEntry w = null;
+
+      // locking here ensures a consistent state - this will prevent any concurrent
+      // flushes/compactions from interfering with the region state.
+      status.setStatus("Obtaining lock to block concurrent updates");
+      this.updatesLock.writeLock().lock();
+      // Record the mvcc for all transactions in progress.
+      w = mvcc.beginMemstoreInsert();
+      mvcc.advanceMemstore(w);
+
+      // 0. wait for all in-progress transactions to commit to HLog before
+      // we can start the snapshot. This ensures that anything from the client
+      // that was written before the snapshot makes it into the snapshot. It
+      // won't necesarily be in the HFiles, but will at least make it into the
+      // WAL
+      mvcc.waitForRead(w);
+      String s = "MVCC rolled forward to snapshot write point, "
+          + "now we can proceed with WAL and hfile referencing";
+      status.setStatus(s);
+      LOG.debug(s);
+
+      // 1. make sure we aren't flushing/compacting so we have a consistent view
+      // of the underlying files when we snapshot (assumed that these take a
+      // while, so we need to fail the snapshot immediately).
+      synchronized (writestate) {
+        if (!writestate.flushing && !(writestate.compacting > 0)) {
+          writestate.writesEnabled = false;
+          writestate.snapshot = true;
+        } else {
+          // XXX - make this configurable to wait for a timeout? Right now we
+          // just assume that this is a long operation and we should try
+          // snapshotting again later.
+          LOG.info("NOT performing snapshot for region " + this + ", flushing="
+              + writestate.flushing + ", compacting=" + writestate.compacting);
+          throw new SnapshotCreationException("Region " + this + " is flushing/compacting", desc);
+        }
       }
+      // tell the monitor that we have reached a stable point
+      monitor.stabilize();
+
+      LOG.debug("Ready to begin snapshotting region files.");
+      // 2. Add references to meta about the store files
+      failureMonitor.failOnError();
+
+    } catch (NotServingRegionException e) {
+      throw new SnapshotCreationException("Requested region was offline", desc);
+    } catch (SnapshotCreationException e) {
+      throw e;
+    }
+    LOG.debug("Region:" + this + " prepared snapshot.");
+  }
+
+  /**
+   * This <b>MUST</b> called after
+   * {@link #startGloballyConsistentSnapshot(SnapshotDescription, GlobalRegionSnapshotProgressMonitor, SnapshotErrorMonitor)}
+   * to unlock the region for writes when the snapshot has completed.
+   * <p>
+   * This can be called mulitple times,
+   */
+  public void finishGlobalSnapshot() {
+    LOG.debug("Finishing snapshot by unlocking resources.");
+    try {
+      this.updatesLock.writeLock().unlock();
+    } catch (IllegalMonitorStateException e) {
+      LOG.debug("Don't own the update lock - snapshot already finished?");
+    }
+    try {
+      this.closeRegionOperation();
+    } catch (IllegalMonitorStateException e) {
+      LOG.debug("Don't own the close operation lock - snapshot already finished?");
+    }
+
+    // unlock the write state, allowing compactions again
+    synchronized (writestate) {
+      writestate.writesEnabled = true;
+      writestate.snapshot = false;
     }
   }
 

@@ -108,6 +108,7 @@ import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotRestoreException;
 import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
