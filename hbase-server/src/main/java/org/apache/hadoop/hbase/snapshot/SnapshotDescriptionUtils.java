@@ -175,7 +175,27 @@ public class SnapshotDescriptionUtils {
    * @return {@link Path} where one can build a snapshot
    */
   public static Path getWorkingSnapshotDir(SnapshotDescription snapshot, final Path rootDir) {
-    return getSnapshotDir(new Path(getSnapshotDir(rootDir), SNAPSHOT_TMP_DIR), snapshot.getName());
+    return getWorkingSnapshotDir(snapshot.getName(), rootDir);
+  }
+
+  /**
+   * Get the directory to build a snapshot, before it is finalized
+   * @param snapshotName name of the snapshot being taken
+   * @param rootDir root directory of the hbase installation
+   * @return {@link Path} where one can build a snapshot
+   */
+  public static Path getWorkingSnapshotDir(final byte[] snapshotName, final Path rootDir) {
+    return getWorkingSnapshotDir(Bytes.toString(snapshotName), rootDir);
+  }
+
+  /**
+   * Get the directory to build a snapshot, before it is finalized
+   * @param snapshotName name of the snapshot being taken
+   * @param rootDir root directory of the hbase installation
+   * @return {@link Path} where one can build a snapshot
+   */
+  public static Path getWorkingSnapshotDir(final String snapshotName, final Path rootDir) {
+    return getSnapshotDir(new Path(getSnapshotDir(rootDir), SNAPSHOT_TMP_DIR), snapshotName);
   }
 
   /**
