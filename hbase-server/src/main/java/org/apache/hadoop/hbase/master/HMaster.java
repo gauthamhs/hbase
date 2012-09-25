@@ -2466,7 +2466,7 @@ Server {
 
   /**
    * Check to see if the currently running snapshot is complete
-   * @return <tt>true</tt> if have a snapshot running, </tt>false</tt otherwise
+   * @return <tt>true</tt> if have a snapshot running, </tt>false</tt> otherwise
    */
   private boolean getCurrentSnapshotDone() {
     TableSnapshotHandler sentinel = this.snapshotManager.getCurrentSnapshotMonitor();

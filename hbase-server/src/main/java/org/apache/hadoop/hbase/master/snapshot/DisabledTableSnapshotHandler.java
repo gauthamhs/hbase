@@ -122,7 +122,7 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
     // get the server directories
     FileStatus[] regionDirs = FSUtils.listStatus(fs, tdir, visibleDirFilter);
     // if no regions, then we are done
-    if (regionDirs == null || regionDirs.length == 0) return;
+    if (regionDirs == null) return;
     monitor.failOnError();
 
     // 4.1 for each region, reference the hfiles in that directory

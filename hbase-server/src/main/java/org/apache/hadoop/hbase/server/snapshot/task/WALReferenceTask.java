@@ -54,7 +54,7 @@ public class WALReferenceTask extends SnapshotTask {
     this.conf = conf;
     this.serverName = serverName;
     // get all the current logs - they all may hold info for this table
-    FileStatus[] logFiles = fs.listStatus(logDir);
+    FileStatus[] logFiles = FSUtils.listStatus(fs, logDir, null);
     // quick exit if no log files
     if (logFiles == null) {
       done = true;
