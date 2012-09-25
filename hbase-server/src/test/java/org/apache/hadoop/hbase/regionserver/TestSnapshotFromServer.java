@@ -36,10 +36,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-<<<<<<< HEAD
-=======
 import org.apache.hadoop.hbase.LargeTests;
->>>>>>> 2bea91c... Refactorting timestamp impl
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -52,14 +49,9 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotCleaner;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
-<<<<<<< HEAD
-import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotHandler;
-=======
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotHandler;
 import org.apache.hadoop.hbase.regionserver.snapshot.error.StoresSwappedFaultPolicy;
 import org.apache.hadoop.hbase.server.commit.TwoPhaseCommit;
->>>>>>> 2bea91c... Refactorting timestamp impl
 import org.apache.hadoop.hbase.server.errorhandling.impl.CheckableFaultInjector;
 import org.apache.hadoop.hbase.server.errorhandling.impl.ExceptionOrchestratorFactory;
 import org.apache.hadoop.hbase.server.errorhandling.impl.FaultInjectionPolicy;
@@ -76,11 +68,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-<<<<<<< HEAD
-=======
-import org.junit.Ignore;
 import org.junit.Test;
->>>>>>> 2bea91c... Refactorting timestamp impl
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ServiceException;

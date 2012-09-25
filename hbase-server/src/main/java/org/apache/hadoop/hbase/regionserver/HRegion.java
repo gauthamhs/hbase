@@ -2735,51 +2735,6 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Complete taking the snapshot on the region. Writes the region info and adds references to the
-   * working snapshot directory.
-   * @param desc snapshot being completed
-   * @param failureMonitor to monitor for external failures
-   * @throws IOException if there is an external or internal error causing the snapshot to fail
-   */
-  public void addRegionToSnapshot(SnapshotDescription desc,
-      ExceptionCheckable<HBaseSnapshotException> failureMonitor) throws IOException {
-    // This should be "fast" since we don't rewrite store files but instead
-    // back up the store files by creating a reference
-    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
-    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(desc, rootDir,
-      regionInfo.getEncodedName());
-
-    // 1. dump region meta info into the snapshot directory
-    LOG.debug("Storing region-info for snapshot.");
-    checkRegioninfoOnFilesystem(snapshotRegionDir);
-
-    // 2. iterate through all the stores in the region
-    LOG.debug("Creating references for hfiles");
-
-    // This ensures that we have an atomic view of the directory as long as we have < ls limit
-    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
-    // batches and may miss files being added/deleted. This could be more robust (iteratively
-    // checking to see if we have all the files until we are sure), but the limit is currently 1000
-    // files/batch, far more than the number of store files under a single column family.
-    for (Store store : stores.values()) {
-      // build the snapshot reference directory for the store
-      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
-        Bytes.toString(store.getFamily().getName()));
-      List<StoreFile> storeFiles = store.getStorefiles();
-      if (LOG.isDebugEnabled()) LOG.debug("Adding snapshot references for " + storeFiles
-          + " hfiles");
-      // TODO consider moving this over to a single file with all the names of the store files
-      for (int i = 0; i < storeFiles.size(); i++) {
-        failureMonitor.failOnError();
-        Path file = storeFiles.get(i).getPath();
-        // 2.3. create "reference" to this store file
-        LOG.debug("(" + i + ") Creating reference for file:" + file);
-        TakeSnapshotUtils.createReference(fs, conf, file, dstStoreDir);
-      }
-    }
-  }
-
-  /**
    * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP} with the provided current
    * timestamp.
    */
