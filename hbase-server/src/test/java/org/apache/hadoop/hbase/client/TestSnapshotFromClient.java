@@ -133,6 +133,9 @@ public class TestSnapshotFromClient {
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
 
+    LOG.debug("FS state before disable:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+      FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     // disable the table
     admin.disableTable(TABLE_NAME);
 
@@ -156,7 +159,7 @@ public class TestSnapshotFromClient {
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-      admin, fs, false);
+      admin, fs, true, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME));
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();

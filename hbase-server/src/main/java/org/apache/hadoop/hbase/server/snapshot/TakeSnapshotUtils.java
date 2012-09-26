@@ -19,8 +19,11 @@ package org.apache.hadoop.hbase.server.snapshot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +40,12 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.server.errorhandling.ExceptionListener;
 import org.apache.hadoop.hbase.server.errorhandling.OperationAttemptTimer;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.exception.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 /**
  * Utilities for useful when taking a snapshot
@@ -156,5 +164,85 @@ public class TakeSnapshotUtils {
     long maxTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
       SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
     return new OperationAttemptTimer(monitor, maxTime, snapshot);
+  }
+
+  public static void verifyAllLogsGotReferenced(FileSystem fs, Path logsDir, SnapshotDescription snapshot,
+ Path snapshotLogDir) throws IOException {
+    assertTrue("Logs directory doesn't exist in snapshot", fs.exists(logsDir));
+    // for each of the server log dirs, make sure it matches the main directory
+    Multimap<String, String> snapshotLogs = getMapOfServersAndLogs(fs, snapshotLogDir);
+    Multimap<String, String> realLogs = getMapOfServersAndLogs(fs, logsDir);
+    if (realLogs != null) {
+      assertNotNull("No server logs added to snapshot", snapshotLogs);
+    } else if (realLogs == null) {
+      assertNull("Snapshotted server logs that don't exist", snapshotLogs);
+    }
+    // check the number of servers
+    Set<Entry<String, Collection<String>>> serverEntries = realLogs.asMap().entrySet();
+    Set<Entry<String, Collection<String>>> snapshotEntries = snapshotLogs.asMap().entrySet();
+    assertEquals("Not the same number of snapshot and original server logs directories", serverEntries.size(), snapshotEntries.size());
+
+    // verify we snapshotted each of the log files
+    for(Entry<String, Collection<String>> serverLogs : serverEntries){
+      Collection<String> snapshotServerLogs = snapshotLogs.get(serverLogs.getKey());
+      assertNotNull("Snapshots missing logs for server:"+serverLogs.getKey(), snapshotServerLogs);
+
+      // check each of the log files
+      assertEquals("Didn't reference all the log files for server:" + serverLogs.getKey(),
+        serverLogs.getValue().size(), snapshotServerLogs.size());
+      for (String log : serverLogs.getValue()) {
+        assertTrue("Snapshot logs didn't include " + log, snapshotServerLogs.contains(log));
+      }
+    }
+  }
+
+  private static void assertNull(String msg, Object isNull) throws CorruptedSnapshotException {
+    if (isNull != null) {
+      throw new CorruptedSnapshotException(msg + ", Expected " + isNull + " to be null.");
+    }
+  }
+
+  private static void assertNotNull(String msg, Object notNull) throws CorruptedSnapshotException {
+    if (notNull == null) {
+      throw new CorruptedSnapshotException(msg + ", Expected object to not be null, but was null.");
+    }
+  }
+
+  private static void assertTrue(String msg, boolean isTrue) throws CorruptedSnapshotException {
+    if (!isTrue) {
+      throw new CorruptedSnapshotException(msg + ", Expected true, but was false");
+    }
+  }
+
+  /**
+   * Assert that the expect matches the gotten amount
+   * @param msg message to add the to expection
+   * @param expected
+   * @param gotten
+   * @throws CorruptedSnapshotException thrown if the two elements don't match
+   */
+  private static void assertEquals(String msg, int expected, int gotten)
+      throws CorruptedSnapshotException {
+    if (expected != gotten) {
+      throw new CorruptedSnapshotException(msg + ". Expected:" + expected + ", got:" + gotten);
+    }
+  }
+
+  /**
+   * @param logsDir
+   */
+  private static Multimap<String, String> getMapOfServersAndLogs(FileSystem fs, Path logdir)
+      throws IOException {
+    FileStatus[] serverLogDirs = FSUtils.listStatus(fs, logdir, new FSUtils.VisibleDirectory(fs));
+    if (serverLogDirs == null) return null;
+    Multimap<String, String> map = HashMultimap.create();
+    for (FileStatus server : serverLogDirs) {
+      FileStatus[] serverLogs = FSUtils.listStatus(fs, server.getPath(), null);
+      if (serverLogs == null) continue;
+      for (FileStatus log : serverLogs) {
+        map.put(server.getPath().getName(), log.getPath().getName());
+      }
+    }
+    return map;
   }
 }

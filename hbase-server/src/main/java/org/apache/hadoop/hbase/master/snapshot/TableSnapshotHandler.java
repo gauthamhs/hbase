@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.server.Finish;
 import org.apache.hadoop.hbase.server.Finishable;
 import org.apache.hadoop.hbase.server.errorhandling.ExceptionCheckable;
 import org.apache.hadoop.hbase.server.snapshot.SnapshotLogUtils;
+import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorListener;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.CorruptedSnapshotException;
@@ -244,46 +245,13 @@ public abstract class TableSnapshotHandler extends TableEventHandler implements 
    * Check that the logs stored in the log directory for the snapshot is valid. If no log directory
    * is present, validation is skipped.
    * @param snapshotDir snapshot directory to check
-   * @throws CorruptedSnapshotException if the hlogs in the snapshot are broken
+   * @throws CorruptedSnapshotException if the hlogs in the snapshot are not correct
    * @throws IOException if we can't reach the filesystem
    */
   private void verifyLogs(Path snapshotDir) throws CorruptedSnapshotException, IOException {
-    List<FileStatus> logs = SnapshotLogUtils.getSnapshotHLogs(fs, snapshotDir);
-    // if we don't have any logs, we are done
-    if (logs.size() == 0) {
-      LOG.info("No HLogs found, skipping verification.");
-      return;
-    }
-
-    // XXX - this is just for a regular table - snapshotting META/ROOT with a globally consistent
-    // snapshot because their log directories are structured differently than a regular table
-    Path realLogs = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
-    Path oldlogs = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    for (FileStatus log : logs) {
-
-      // find the real directory
-      Path serverDir = log.getPath().getParent();
-      Path realLogDir = new Path(realLogs, serverDir.getName());
-
-      // deference the file name so we can lookup the real file
-      String fileName = log.getPath().getName();
-      // remove the reference file info
-      String realFile = fileName.substring(0, fileName.lastIndexOf('.'));
-      Path realLog = new Path(realLogDir, realFile);
-
-      if (fs.exists(realLog)) {
-        LOG.debug("Log:" + realLog + " exists and is in snapshot via:" + log);
-        continue;
-      }
-
-      // otherwise, we need to check to it in the oldlogs directory
-      String oldLogFilename = SnapshotLogUtils.getOldLogsName(fileName);
-      Path oldLogfilePath = new Path(oldlogs, oldLogFilename);
-      if (!fs.exists(oldLogfilePath)) {
-        throw new CorruptedSnapshotException("Cannot find log: " + log.getPath()
-            + " in primary logs dir (" + realLogs + ") or in oldlogs directory (" + oldlogs + ")");
-      }
-    }
+    Path snapshotLogDir = new Path(snapshotDir, HConstants.HREGION_LOGDIR_NAME);
+    Path logsDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
+    TakeSnapshotUtils.verifyAllLogsGotReferenced(fs, logsDir, snapshot, snapshotLogDir);
   }
 
   /**

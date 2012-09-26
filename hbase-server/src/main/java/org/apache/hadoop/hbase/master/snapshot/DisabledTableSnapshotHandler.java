@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.server.errorhandling.OperationAttemptTimer;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorListener;
 import org.apache.hadoop.hbase.server.snapshot.task.TableInfoCopyTask;
-import org.apache.hadoop.hbase.server.snapshot.task.WALReferenceTask;
+import org.apache.hadoop.hbase.server.snapshot.task.ReferenceServerWALsTask;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -87,6 +88,8 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
       monitor);
   }
 
+  // TODO consider parallelizing these operations since they are independent. Right now its just
+  // easier to keep them serial though
   @Override
   protected void snapshot(List<HRegionInfo> regions) throws IOException, KeeperException {
     // 0. start the timer for taking the snapshot
@@ -102,12 +105,17 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
       monitor.failOnError();
 
       // 1.2 create references for each of the WAL files for the region
-      Path editsdir = HLog.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
-        regionInfo.getEncodedName()));
-      WALReferenceTask op = new WALReferenceTask(snapshot, this.monitor, editsdir, conf,
-          fs, "disabledTableSnapshot");
-      op.run();
-      monitor.failOnError();
+      Path logdir = new Path(FSUtils.getRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
+      FileStatus[] serverLogDirs = FSUtils.listStatus(fs, logdir, visibleDirFilter);
+      // if we have logs directories, then reference all the logs in each server directory
+      if (serverLogDirs != null) {
+        for (FileStatus serverDir : serverLogDirs) {
+          ReferenceServerWALsTask op = new ReferenceServerWALsTask(snapshot, this.monitor,
+              serverDir.getPath(), conf, fs);
+          op.run();
+          monitor.failOnError();
+        }
+      }
     }
 
     // 2. write the table info to disk
@@ -154,17 +162,18 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
    */
   private void addReferencesToHFilesInRegion(Path regionDir, FileStatus[] families)
       throws IOException {
-    if(families == null || families.length == 0){
-      LOG.info("No families under region directory:"+regionDir+", not attempting to add references.");
+    if (families == null || families.length == 0) {
+      LOG.info("No families under region directory:" + regionDir
+          + ", not attempting to add references.");
       return;
     }
 
     // snapshot directories to store the hfile reference
-    List<Path> snapshotFamilyDirs = TakeSnapshotUtils.getFamilySnapshotDirectories(snapshot, rootDir,
-      regionDir.getName(), families);
-    
+    List<Path> snapshotFamilyDirs = TakeSnapshotUtils.getFamilySnapshotDirectories(snapshot,
+      rootDir, regionDir.getName(), families);
+
     LOG.debug("Add hfile references to snapshot directories:" + snapshotFamilyDirs);
-    for (int i=0; i< families.length; i++){
+    for (int i = 0; i < families.length; i++) {
       FileStatus family = families[i];
       Path familyDir = family.getPath();
       // get all the hfiles in the family

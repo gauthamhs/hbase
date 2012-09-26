@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -96,7 +98,8 @@ public class SnapshotTestingUtils {
    * Confirm that the snapshot contains references to all the files that should be in the snapshot
    */
   public static void confirmSnapshotValid(SnapshotDescription snapshotDescriptor, byte[] tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs)
+      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
+      Path logsDir)
       throws IOException {
     Path snapshotDir = SnapshotDescriptionUtils
         .getCompletedSnapshotDir(snapshotDescriptor, rootDir);
@@ -105,10 +108,8 @@ public class SnapshotTestingUtils {
     assertTrue(fs.exists(snapshotinfo));
     // check the logs dir
     if (requireLogs) {
-      Path logsDir = new Path(snapshotDir, ".logs");
-      assertTrue("Logs directory doesn't exist in snapshot", fs.exists(logsDir));
-      // make sure we have some logs
-      assertTrue(fs.listStatus(logsDir).length > 0);
+      TakeSnapshotUtils.verifyAllLogsGotReferenced(fs,
+        logsDir, snapshotDescriptor, new Path(snapshotDir, HConstants.HREGION_LOGDIR_NAME));
     }
     // check the table info
     HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs, rootDir, tableName);

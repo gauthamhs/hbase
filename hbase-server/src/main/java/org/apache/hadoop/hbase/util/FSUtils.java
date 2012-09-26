@@ -1344,4 +1344,20 @@ public abstract class FSUtils {
       }
     }
   }
+
+  /**
+   * Create a zero-length file on the {@link FileSystem}.
+   * @param fs Filesystem on which to create the file
+   * @param file full path of the file to create. If {@link Path#getParent()} returns <tt>null</tt>
+   *          the file is just created in the root filesystem directory. If the parent directories
+   *          exist, just creates the file
+   * @return <tt>true</tt> on succcess, <tt>false</tt> if the file cannot be created or already
+   *         exists
+   * @throws IOException if the filesystem throws an exception
+   */
+  public static boolean touch(FileSystem fs, Path file) throws IOException {
+    // create all the parents
+    if (file.getParent() != null && !fs.exists(file.getParent())) fs.mkdirs(file.getParent());
+    return fs.createNewFile(file);
+  }
 }
