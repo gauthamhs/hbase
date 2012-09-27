@@ -1277,19 +1277,6 @@ public abstract class FSUtils {
   }
 
   /**
-   * Log the current state of the filesystem from a certain root directory
-   * @param fs filesystem to investigate
-   * @param root root file/directory to start logging from
-   * @param LOG log to output information
-   * @throws IOException if an unexpected exception occurs
-   */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
-      throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(LOG, fs, root, "|-");
-  }
-
-  /**
    * Throw an exception if an action is not permitted by a user on a file.
    * 
    * @param ugi
@@ -1326,6 +1313,19 @@ public abstract class FSUtils {
   }
 
   /**
+   * Log the current state of the filesystem from a certain root directory
+   * @param fs filesystem to investigate
+   * @param root root file/directory to start logging from
+   * @param LOG log to output information
+   * @throws IOException if an unexpected exception occurs
+   */
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+      throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(LOG, fs, root, "|-");
+  }
+
+  /**
    * Recursive helper to log the state of the FS
    * 
    * @see #logFileSystemState(FileSystem, Path, Log)
@@ -1357,7 +1357,7 @@ public abstract class FSUtils {
    */
   public static boolean touch(FileSystem fs, Path file) throws IOException {
     // create all the parents
-    if (file.getParent() != null && !fs.exists(file.getParent())) fs.mkdirs(file.getParent());
+    if (file.getParent() != null) fs.mkdirs(file.getParent());
     return fs.createNewFile(file);
   }
 }
