@@ -142,4 +142,13 @@ public class SnapshotManager extends Aborting {
   public void setSnapshotHandler(TableSnapshotHandler handler) {
     this.handler = handler;
   }
+
+  /**
+   * EXPOSED FOR TESTING.
+   * @return the {@link ExceptionOrchestrator} that updates all running {@link TableSnapshotHandler}
+   *         in the even of a n abort.
+   */
+  ExceptionOrchestrator<HBaseSnapshotException> getExceptionOrchestrator() {
+    return this.dispatcher;
+  }
 }

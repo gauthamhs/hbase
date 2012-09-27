@@ -260,7 +260,7 @@ public abstract class TableSnapshotHandler extends TableEventHandler implements 
   protected abstract void snapshot(List<HRegionInfo> regions) throws IOException, KeeperException;
 
   @Override
-  public final void finish() {
+  public void finish() {
     finished.finish();
   }
 
