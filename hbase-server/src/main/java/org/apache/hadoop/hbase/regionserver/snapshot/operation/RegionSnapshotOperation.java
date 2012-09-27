@@ -33,12 +33,16 @@ import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Threads;
 
 /**
- * Runnable wrapper around the the snapshot operation on a region so the snapshotting can be done in
- * parallel on the regions.
+ * Runnable wrapper around the the snapshot operation on a <b>single</b> region so the snapshotting
+ * can be done in parallel on the regions.
  * <p>
  * Handles running the snapshot on a single region and <i> just waiting for the {@link #prepare()}
  * phase to complete before considering the task complete. The remaining work({@link #commit()},
  * {@link #finish()}, etc.) still continues in another thread, but considers the task 'complete'.
+ * <p>
+ * To determine if all regions have completed the operation, a convenience latch is provided via
+ * {@link RegionSnapshotOperationStatus#getFinishLatch()}.
+ * @see RegionSnapshotOperationStatus
  */
 public abstract class RegionSnapshotOperation extends
     TwoPhaseCommit<LocalSnapshotExceptionDispatcher, HBaseSnapshotException> implements
@@ -65,6 +69,9 @@ public abstract class RegionSnapshotOperation extends
     return this.snapshot;
   }
 
+  /**
+   * Start running the snapshot operation on the given region.
+   */
   @Override
   public void run() {
     LOG.debug("Starting snapshot on region:" + this.region);

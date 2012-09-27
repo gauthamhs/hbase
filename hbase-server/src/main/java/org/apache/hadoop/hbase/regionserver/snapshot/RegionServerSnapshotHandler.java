@@ -164,7 +164,7 @@ public class RegionServerSnapshotHandler extends Configured implements Abortable
    */
   public void close(boolean force) throws IOException {
     if (force) {
-      this.abort("Forcefully closing  - all tasks must sto immediately.", null);
+      this.abort("Forcefully closing  - all tasks must stop immediately.", null);
       return;
     }
     // otherwise, let tasks end gracefully

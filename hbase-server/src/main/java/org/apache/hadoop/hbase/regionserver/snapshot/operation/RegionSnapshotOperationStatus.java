@@ -38,6 +38,12 @@ public class RegionSnapshotOperationStatus {
   // per region stability info
   protected int totalRegions = 0;
 
+  /**
+   * Monitor the status of the operation.
+   * @param regionCount number of regions to complete the operation before the operation is ready.
+   *          Wait on all regions via {@link #waitUntilDone(SnapshotErrorListener)}.
+   * @param wakeFrequency frequency to check for errors while waiting for regions to prepare
+   */
   public RegionSnapshotOperationStatus(int regionCount, long wakeFrequency) {
     this.wakeFrequency = wakeFrequency;
     this.totalRegions = regionCount;
