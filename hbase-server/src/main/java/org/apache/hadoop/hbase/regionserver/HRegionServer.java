@@ -860,6 +860,9 @@ public class  HRegionServer implements ClientProtocol,
       }
       registerMBean();
 
+      // start the snapshot handler, since the server is ready to run
+      this.snapshotHandler.start();
+
       // We registered with the Master.  Go into run mode.
       long lastMsg = 0;
       long oldRequestCount = -1;
@@ -937,6 +940,12 @@ public class  HRegionServer implements ClientProtocol,
     if (this.hlogRoller != null) this.hlogRoller.interruptIfNecessary();
     if (this.compactionChecker != null)
       this.compactionChecker.interrupt();
+
+    try {
+      if (snapshotHandler != null) snapshotHandler.close(this.abortRequested);
+    } catch (IOException e) {
+      LOG.warn("Failed to close snapshot handler cleanly", e);
+    }
 
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
