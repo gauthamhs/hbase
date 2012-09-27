@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.snapshot.operation.SnapshotTaskManager;
-import org.apache.hadoop.hbase.regionserver.snapshot.operation.TimestampSnapshotOperation;
 import org.apache.hadoop.hbase.server.Aborting;
 import org.apache.hadoop.hbase.server.commit.ThreePhaseCommit;
 import org.apache.hadoop.hbase.server.commit.distributed.DistributedCommitException;
@@ -99,7 +98,7 @@ public class RegionServerSnapshotHandler extends Configured implements Abortable
   /**
    * Exposed for testing.
    * @param conf
-   * @param parent
+   * @param parent parent running the snapshot handler
    * @param controller use a custom snapshot controller
    * @param cohortMember use a custom cohort member
    */

@@ -110,6 +110,24 @@ public class SnapshotManager extends Aborting {
   }
 
   /**
+   * Fully specify all necessary components of a snapshot manager Exposed for testing.
+   * @param master services for the master where the manager is running
+   * @param coordinator coordinator to coordinate online, distributed three phase commit based
+   *          snapshots
+   * @param monitorFactory factory to create error monitors for running snapshots
+   */
+  public SnapshotManager(final MasterServices master,
+      DistributedThreePhaseCommitCoordinator coordinator, SnapshotErrorMonitorFactory monitorFactory) {
+    this.master = master;
+
+    this.wakeFrequency = master.getConfiguration().getInt(MASTER_MAX_WAKE_FREQUENCY_KEY,
+      DEFAULT_MAX_WAIT_FREQUENCY);
+    this.coordinator = coordinator;
+    this.errorFactory = monitorFactory;
+    this.dispatcher = errorFactory.getHub();
+  }
+
+  /**
    * @return <tt>true</tt> if there is a snapshot in process, <tt>false</tt> otherwise
    * @throws SnapshotCreationException if the snapshot failed
    */
