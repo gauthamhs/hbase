@@ -292,8 +292,4 @@ public class TestFSUtils {
       FSUtils.delete(fs, file, true);
     }
   }
-
-  @org.junit.Rule
-  public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
 }
