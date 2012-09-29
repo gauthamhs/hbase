@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.snapshot.operation.SnapshotTaskManager;
+import org.apache.hadoop.hbase.regionserver.snapshot.operation.TimestampSnapshotOperation;
 import org.apache.hadoop.hbase.server.Aborting;
 import org.apache.hadoop.hbase.server.commit.ThreePhaseCommit;
 import org.apache.hadoop.hbase.server.commit.distributed.DistributedCommitException;
@@ -99,6 +100,7 @@ public class RegionServerSnapshotHandler extends Configured implements Abortable
    * Exposed for testing.
    * @param conf
    * @param parent parent running the snapshot handler
+   * @param parent
    * @param controller use a custom snapshot controller
    * @param cohortMember use a custom cohort member
    */
@@ -242,7 +244,10 @@ public class RegionServerSnapshotHandler extends Configured implements Abortable
         case GLOBAL:
           throw new IllegalArgumentException("Unimpememted snapshot type:" + snapshot.getType());
         case TIMESTAMP:
-          throw new IllegalArgumentException("Unimpememted snapshot type:" + snapshot.getType());
+          return new TimestampSnapshotOperation(errorDispatcher, wakeFrequency,
+              timestampSnapshotTimeout, involvedRegions, snapshot,
+              RegionServerSnapshotHandler.this.getConf(), taskManager, snapshotErrorMonitorFactory,
+              parent.getFileSystem());
         default:
           throw new IllegalArgumentException("Unrecognized snapshot type:" + snapshot.getType());
         }
