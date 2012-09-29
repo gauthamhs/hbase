@@ -24,6 +24,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.AccessController;
@@ -1660,5 +1661,20 @@ public class Bytes {
     byte [] result = new byte[bytes.length];
     System.arraycopy(bytes, 0, result, 0, bytes.length);	  
     return result;
+  }
+
+  /**
+   * Read an integer of the current mark in the {@link ByteBuffer}. Data is retrieved via
+   * {@link ByteBuffer#get()}, which means this method has all the implications of doing a relative
+   * get on the passed {@link ByteBuffer}.
+   * @param data to read from
+   * @return an <tt>int</tt> if it is the first stored element in the buffer
+   * @throws BufferUnderflowException If there are fewer than {@value #SIZEOF_INT} bytes remaining
+   *           in this buffer
+   */
+  public static int readInt(ByteBuffer data) {
+    byte[] elem = new byte[SIZEOF_INT];
+    data.get(elem);
+    return toInt(elem);
   }
 }
