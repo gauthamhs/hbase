@@ -107,6 +107,7 @@ public class SnapshotManager extends Aborting {
     this.coordinator = new DistributedThreePhaseCommitCoordinator(
         master.getServerName().toString(), keepAliveTime, opThreads, wakeFrequency, controller,
         null);
+    controller.start(this.coordinator);
   }
 
   /**
