@@ -2089,6 +2089,14 @@ public class HBaseAdmin implements Abortable, Closeable {
     snapshot(Bytes.toString(snapshotName), Bytes.toString(tableName));
   }
 
+  public void globalSnapshot(final byte[] snapshotName, final byte[] tableName) throws IOException {
+    globalSnapshot(Bytes.toString(snapshotName), Bytes.toString(tableName));
+  }
+
+  public void globalSnapshot(final String snapshotName, final String tableName) throws IOException {
+    snapshot(snapshotName, tableName, SnapshotDescription.Type.GLOBAL);
+  }
+
   /**
    * Create typed snapshot of the table.
    * <p>
