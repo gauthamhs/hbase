@@ -118,6 +118,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
@@ -128,6 +130,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
@@ -136,12 +144,18 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
@@ -162,6 +176,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -2300,5 +2315,54 @@ Server {
 
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  @Override
+  public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest request)
+      throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public ListSnapshotResponse listSnapshots(RpcController controller, ListSnapshotRequest request)
+      throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public RenameSnapshotResponse renameSnapshot(RpcController controller,
+      RenameSnapshotRequest request) throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
+      DeleteSnapshotRequest request) throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
+      IsSnapshotDoneRequest request) throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
+      RestoreSnapshotRequest request) throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
+      IsRestoreSnapshotDoneRequest request) throws ServiceException {
+    throw new ServiceException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
   }
 }

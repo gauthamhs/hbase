@@ -72,20 +72,34 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaAlterStatusRequest;
@@ -93,8 +107,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaA
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.exception.RenameSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -2030,6 +2051,483 @@ public class HBaseAdmin implements Abortable, Closeable {
       cleanupCatalogTracker(ct);
     }
     return state;
+  }
+
+
+  /**
+   * Create a timestamp consistent snapshot for the given table.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   * @throws IOException if a remote or network exception occurs
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(final String snapshotName, final String tableName) throws IOException,
+      SnapshotCreationException, IllegalArgumentException {
+    snapshot(snapshotName, tableName, SnapshotDescription.Type.TIMESTAMP);
+  }
+
+  /**
+   * Create a timestamp consistent snapshot for the given table.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   * @throws IOException if a remote or network exception occurs
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(final byte[] snapshotName, final byte[] tableName) throws IOException,
+      SnapshotCreationException, IllegalArgumentException {
+    snapshot(Bytes.toString(snapshotName), Bytes.toString(tableName));
+  }
+
+  /**
+   * Create typed snapshot of the table.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * <p>
+   * Generally, you should <b>not</b> use this, but instead just take a {@link Type#TIMESTAMP
+   * Timestamp-consistentSnapshot} with {@link #snapshot(byte[], byte[])} or
+   * {@link #snapshot(String, String)}, which creates a timestamp-based snapshot, causing minimal
+   * interference with running cluster.
+   * <p>
+   * However, this method can be used to launch a {@link Type#GLOBAL GlobalSnapshot}. Note that a
+   * {@link Type#GLOBAL GlobalSnapshot}will <b>block all writes to the table</b> while taking the
+   * snapshot. This occurs so a single stable state can be achieved across all servers hosting the
+   * table - this is beyond the consistency constraints placed on an HBase table. This type of
+   * snapshot has two main implications:
+   * <ul>
+   * <li>all writes to the table will block while taking the snapshot</li>
+   * <li>the probability of success decreases with increasing cluster size and is not recommended
+   * for clusters much greater than 500 nodes</li>
+   * </ul>
+   * Together, the two above considerations mean to get a snapshot with any real load on your
+   * system, you will likely have multiple attempts and will suffer notable performance degradation,
+   * for a large cluster.
+   * <p>
+   * This can be suitable for a smaller cluster, but comes with the above caveats - user beware (you
+   * should really consider if you can get by with just using timestamp-consistent snapshots via
+   * {@link #snapshot(byte[], byte[])}) or {@link #snapshot(String, String)}.
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   *          snapshots stored on the cluster
+   * @param tableName name of the table to snapshot
+   * @param type type of snapshot to take
+   * @throws IOException we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(final String snapshotName, final String tableName,
+      SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
+      IllegalArgumentException {
+    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+    builder.setTable(tableName);
+    builder.setName(snapshotName);
+    builder.setType(type);
+    snapshot(builder.build());
+  }
+
+  /**
+   * Take a snapshot and wait for the server to complete that snapshot (blocking).
+   * <p>
+   * Only a single snapshot should be taken at a time for an instance of HBase, or results may be
+   * undefined (you can tell multiple HBase clusters to snapshot at the same time, but only one at a
+   * time for a single cluster).
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * <p>
+   * You should probably use {@link #snapshot(String, String)} or {@link #snapshot(byte[], byte[])}
+   * unless you are sure about the type of snapshot that you want to take.
+   * @param snapshot snapshot to take
+   * @throws IOException or we lose contact with the master.
+   * @throws SnapshotCreationException if snapshot failed to be taken
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(SnapshotDescription snapshot) throws IOException, SnapshotCreationException,
+      IllegalArgumentException {
+    // make sure the snapshot is valid
+    SnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+
+    // actually take the snapshot
+    TakeSnapshotResponse response = takeSnapshotAsync(snapshot);
+    final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot)
+        .build();
+    IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder().buildPartial();
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long max = response.getExpectedTime();
+    long maxPauseTime = max / this.numRetries;
+    int tries = 0;
+    LOG.debug("Waiting a max of " + max + " ms for snapshot to complete. (max " + maxPauseTime
+        + " ms per retry)");
+    while ((EnvironmentEdgeManager.currentTimeMillis() - start) < max && !done.getDone()) {
+      try {
+        // sleep a backoff <= pauseTime amount
+        long sleep = getPauseTime(tries++);
+        LOG.debug("Found sleep:" + sleep);
+        sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
+        LOG.debug(tries + ") Sleeping: " + sleep + " ms while we wait for snapshot to complete.");
+        Thread.sleep(sleep);
+
+      } catch (InterruptedException e) {
+        LOG.debug("Interrupted while waiting for snapshot " + snapshot + " to complete");
+        Thread.currentThread().interrupt();
+      }
+      LOG.debug("Getting current status of snapshot from master...");
+      done = execute(new MasterAdminCallable<IsSnapshotDoneResponse>() {
+        @Override
+        public IsSnapshotDoneResponse call() throws ServiceException {
+          return masterAdmin.isSnapshotDone(null, request);
+        }
+      });
+    }
+    if (!done.getDone()) {
+      throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
+          + "' wasn't completed in expectedTime:" + max + " ms");
+    }
+  }
+
+  /**
+   * Take a snapshot and wait for the server to complete that snapshot (asynchronous)
+   * <p>
+   * Only a single snapshot should be taken at a time, or results may be undefined.
+   * @param snapshot snapshot to take
+   * @return response from the server indicating the max time to wait for the snapshot
+   * @throws IOException if the snapshot did not succeed or we lose contact with the master.
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public TakeSnapshotResponse takeSnapshotAsync(SnapshotDescription snapshot) throws IOException,
+      SnapshotCreationException {
+    SnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+    final TakeSnapshotRequest request = TakeSnapshotRequest.newBuilder().setSnapshot(snapshot)
+        .build();
+    // run the snapshot on the master
+    return execute(new MasterAdminCallable<TakeSnapshotResponse>() {
+      @Override
+      public TakeSnapshotResponse call() throws ServiceException {
+        return masterAdmin.snapshot(null, request);
+      }
+    });
+  }
+
+  /**
+   * Check the current state of the passed snapshot.
+   * <p>
+   * There are three possible states:
+   * <ol>
+   * <li>running - returns <tt>false</tt></li>
+   * <li>finished - returns <tt>true</tt></li>
+   * <li>finished with error - throws the exception that caused the snapshot to fail</li>
+   * </ol>
+   * <p>
+   * The cluster only knows about the most recent snapshot. Therefore, if another snapshot has been
+   * run/started since the snapshot your are checking, you will recieve an
+   * {@link UnknownSnapshotException}.
+   * @param snapshot description of the snapshot to check
+   * @return <tt>true</tt> if the snapshot is completed, <tt>false</tt> if the snapshot is still
+   *         running
+   * @throws IOException if we have a network issue
+   * @throws HBaseSnapshotException if the snapshot failed
+   * @throws UnknownSnapshotException if the requested snapshot is unknown
+   */
+  public boolean isSnapshotFinished(final SnapshotDescription snapshot)
+      throws IOException, HBaseSnapshotException, UnknownSnapshotException {
+
+    return execute(new MasterAdminCallable<IsSnapshotDoneResponse>() {
+      @Override
+      public IsSnapshotDoneResponse call() throws ServiceException {
+        return masterAdmin.isSnapshotDone(null,
+          IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build());
+      }
+    }).getDone();
+  }
+
+  /**
+   * Rename snapshot
+   * @param snapshotName current snapshot name
+   * @param newSnapshotName new snapshot name
+   */
+  public void renameSnapshot(final byte[] snapshotName, final byte[] newSnapshotName)
+      throws IOException, RenameSnapshotException {
+    renameSnapshot(Bytes.toString(snapshotName), Bytes.toString(newSnapshotName));
+  }
+
+  /**
+   * Rename snapshot
+   * @param snapshotName current snapshot name
+   * @param newSnapshotName new snapshot name
+   */
+  public void renameSnapshot(final String snapshotName, final String newSnapshotName)
+      throws IOException, RenameSnapshotException {
+    final RenameSnapshotRequest request = RenameSnapshotRequest.newBuilder()
+        .setName(snapshotName)
+        .setNewName(newSnapshotName)
+        .build();
+
+    // run the snapshot restore on the master
+    execute(new MasterAdminCallable<RenameSnapshotResponse>() {
+      @Override
+      public RenameSnapshotResponse call() throws ServiceException {
+        return masterAdmin.renameSnapshot(null, request);
+      }
+    });
+  }
+
+  /**
+   * Restore the specified snapshot on the original table.
+   * Before restoring the table, create a new snapshot with the current table state.
+   *
+   * @param snapshotName name of the snapshot to restore
+   * @throws IOException if a remote or network exception occurs
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the restore request is formatted incorrectly
+   */
+  public void restoreSnapshot(final byte[] snapshotName)
+      throws IOException, RestoreSnapshotException {
+    restoreSnapshot(Bytes.toString(snapshotName));
+  }
+
+  /**
+   * Restore the specified snapshot on the original table.
+   * Before restoring the table, create a new snapshot with the current table state.
+   *
+   * @param snapshotName name of the snapshot to restore
+   * @throws IOException if a remote or network exception occurs
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the restore request is formatted incorrectly
+   */
+  public void restoreSnapshot(final String snapshotName)
+      throws IOException, RestoreSnapshotException {
+    String rollbackSnapshot = String.format("%s-%d", snapshotName,
+      EnvironmentEdgeManager.currentTimeMillis());
+
+    String tableName = null;
+    for (SnapshotDescription snapshotInfo: listSnapshots()) {
+      if (snapshotInfo.getName().equals(snapshotName)) {
+        tableName = snapshotInfo.getTable();
+        break;
+      }
+    }
+
+    if (tableName == null) {
+      throw new RestoreSnapshotException(
+        "Unable to find the table name for snapshot=" + snapshotName);
+    }
+
+    // Take a snapshot of the current state
+    snapshot(rollbackSnapshot, tableName);
+
+    // Restore snapshot
+    try {
+      restoreSnapshot(snapshotName, null);
+    } catch (IOException e) {
+      // Try to rollback
+      try {
+        LOG.error("Restore snapshot=" + snapshotName +
+          " failed. Trying to rollback to snapshot=" + rollbackSnapshot, e);
+        restoreSnapshot(rollbackSnapshot, null);
+        throw new RestoreSnapshotException(e);
+      } catch (IOException ex) {
+        LOG.error("Failed to restore and rollback to snapshot=" + rollbackSnapshot, ex);
+        throw new RestoreSnapshotException(
+          "Failed to restore and rollback to snapshot=" + rollbackSnapshot, ex);
+      }
+    }
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   *
+   * @param snapshotName name of the snapshot to be restored
+   * @param tableName name of the table where the snapshot will be restored
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be created already exists
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the specified table has not a valid name
+   */
+  public void cloneSnapshot(final byte[] snapshotName, final byte[] tableName)
+      throws IOException, TableExistsException, RestoreSnapshotException {
+    cloneSnapshot(Bytes.toString(snapshotName), Bytes.toString(tableName));
+  }
+
+  /**
+   * Create a new table by cloning the snapshot content.
+   *
+   * @param snapshotName name of the snapshot to be restored
+   * @param tableName name of the table where the snapshot will be restored
+   * @throws IOException if a remote or network exception occurs
+   * @throws TableExistsException if table to be created already exists
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the specified table has not a valid name
+   */
+  public void cloneSnapshot(final String snapshotName, final String tableName)
+      throws IOException, TableExistsException, RestoreSnapshotException {
+    if (tableExists(tableName)) {
+      throw new TableExistsException("Table '" + tableName + " already exists");
+    }
+    restoreSnapshot(snapshotName, tableName);
+  }
+
+  /**
+   * Restore or clone a snapshot.
+   *
+   * @param snapshot snapshot to restore
+   * @param tableName table name to restore the snapshot on
+   * @throws IOException if a remote or network exception occurs
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the restore request is formatted incorrectly
+   */
+  private void restoreSnapshot(final String snapshotName, final String tableName)
+      throws IOException, RestoreSnapshotException {
+    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+    if (tableName != null) {
+      HTableDescriptor.isLegalTableName(Bytes.toBytes(tableName));
+      builder.setTable(tableName);
+    }
+    builder.setName(snapshotName);
+    restoreSnapshot(builder.build());
+  }
+
+  /**
+   * Restore a snapshot and wait for the server to complete that restore (blocking).
+   *
+   * @param snapshot snapshot to restore
+   * @throws IOException if a remote or network exception occurs
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the restore request is formatted incorrectly
+   */
+  private void restoreSnapshot(final SnapshotDescription snapshot)
+      throws IOException, RestoreSnapshotException {
+    // actually restore the snapshot
+    RestoreSnapshotResponse response = restoreSnapshotAsync(snapshot);
+
+    final IsRestoreSnapshotDoneRequest request = IsRestoreSnapshotDoneRequest.newBuilder()
+        .setSnapshot(snapshot).build();
+    IsRestoreSnapshotDoneResponse done = IsRestoreSnapshotDoneResponse.newBuilder().buildPartial();
+    long max = response.getExpectedTime();
+    long maxPauseTime = max / this.numRetries;
+    int tries = 0;
+    LOG.debug("Waiting a max of " + max + " ms for snapshot restore to complete. (max " + maxPauseTime
+        + " ms per retry)");
+    long start = EnvironmentEdgeManager.currentTimeMillis();
+    while ((EnvironmentEdgeManager.currentTimeMillis() - start) < max && !done.getDone()) {
+      try {
+        // sleep a backoff <= pauseTime amount
+        long sleep = getPauseTime(tries++);
+        LOG.debug("Found sleep:" + sleep);
+        sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
+        LOG.debug(tries + ") Sleeping: " + sleep + " ms while we wait for snapshot restore to complete.");
+        Thread.sleep(sleep);
+
+      } catch (InterruptedException e) {
+        LOG.debug("Interrupted while waiting for snapshot " + snapshot + " restore to complete");
+        Thread.currentThread().interrupt();
+      }
+      LOG.debug("Getting current status of snapshot restore from master...");
+      done = execute(new MasterAdminCallable<IsRestoreSnapshotDoneResponse>() {
+        @Override
+        public IsRestoreSnapshotDoneResponse call() throws ServiceException {
+          return masterAdmin.isRestoreSnapshotDone(null, request);
+        }
+      });
+    }
+    if (!done.getDone()) {
+      throw new RestoreSnapshotException("Snapshot '" + snapshot.getName()
+          + "' wasn't restored in expectedTime:" + max + " ms");
+    }
+  }
+
+  /**
+   * Restore a snapshot and wait for the server to complete that restore (asynchronous)
+   * <p>
+   * Only a single snapshot should be restored at a time, or results may be undefined.
+   * @param snapshot snapshot to restore
+   * @return response from the server indicating the max time to wait for the snapshot
+   * @throws IOException if a remote or network exception occurs
+   * @throws RestoreSnapshotException if snapshot failed to be restored
+   * @throws IllegalArgumentException if the restore request is formatted incorrectly
+   */
+  private RestoreSnapshotResponse restoreSnapshotAsync(final SnapshotDescription snapshot)
+      throws IOException, RestoreSnapshotException {
+    HTableDescriptor.isLegalTableName(Bytes.toBytes(snapshot.getName()));
+
+    final RestoreSnapshotRequest request = RestoreSnapshotRequest.newBuilder().setSnapshot(snapshot)
+        .build();
+
+    // run the snapshot restore on the master
+    return execute(new MasterAdminCallable<RestoreSnapshotResponse>() {
+      @Override
+      public RestoreSnapshotResponse call() throws ServiceException {
+        return masterAdmin.restoreSnapshot(null, request);
+      }
+    });
+  }
+
+  /**
+   * List existing snapshots.
+   * @return a list of snapshot descriptor for existing snapshots
+   * @throws IOException if a network error occurs
+   */
+  public List<SnapshotDescription> listSnapshots() throws IOException {
+    return execute(new MasterAdminCallable<List<SnapshotDescription>>() {
+      @Override
+      public List<SnapshotDescription> call() throws ServiceException {
+        return masterAdmin.listSnapshots(null, ListSnapshotRequest.newBuilder().build())
+            .getSnapshotsList();
+      }
+    });
+  }
+
+  /**
+   * Delete an existing snapshot.
+   * @param snapshotName name of the snapshot
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void deleteSnapshot(final byte[] snapshotName) throws IOException {
+    deleteSnapshot(Bytes.toString(snapshotName));
+  }
+
+  /**
+   * Delete an existing snapshot.
+   * @param snapshotName name of the snapshot
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void deleteSnapshot(final String snapshotName) throws IOException {
+    // make sure the snapshot is possibly valid
+    HTableDescriptor.isLegalTableName(Bytes.toBytes(snapshotName));
+    // do the delete
+    execute(new MasterAdminCallable<Void>() {
+      @Override
+      public Void call() throws ServiceException {
+        masterAdmin.deleteSnapshot(
+          null,
+          DeleteSnapshotRequest.newBuilder()
+              .setSnapshot(SnapshotDescription.newBuilder().setName(snapshotName).build()).build());
+        return null;
+      }
+    });
   }
 
   /**
