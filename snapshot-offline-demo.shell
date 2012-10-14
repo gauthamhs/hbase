@@ -1,0 +1,90 @@
+require "digest/md5"
+
+# Create a table and fill with some data
+# =============================================================
+puts("Create and Fill table...")
+create 'test-table', 'cf'
+
+for x in 0..3 do
+  for i in 0..599 do
+      row_key = (Digest::MD5.hexdigest(x.to_s() + i.to_s()))
+      put 'test-table', row_key, 'cf:q', row_key
+  end
+  flush 'test-table'
+end
+
+puts 'Put some more data in memstore'
+for i in 0..999 do
+    row_key = (Digest::MD5.hexdigest(i.to_s()))
+    put 'test-table', row_key, 'cf:q', row_key
+end
+
+# Take a new snapshot
+# =============================================================
+puts("Take a snapshot table...")
+disable 'test-table'
+snapshot 'test-table', 'test-snapshot'
+enable 'test-table'
+list_snapshots
+
+# Clone snapshot
+# =============================================================
+puts("Clone the snapshot...")
+restore = org.apache.hadoop.hbase.snapshot.tool.RestoreSnapshot.new()
+restore.setConf(org.apache.hadoop.hbase.HBaseConfiguration.create());
+restore.run(["-restore", "test-snapshot", "-table", "test-table-clone"])
+enable 'test-table-clone'
+scan 'test-table-clone', {'LIMIT' => 5}
+
+# Clone snapshot No Wal
+# =============================================================
+puts("Clone the snapshot without wal...")
+restore = org.apache.hadoop.hbase.snapshot.tool.RestoreSnapshot.new()
+restore.setConf(org.apache.hadoop.hbase.HBaseConfiguration.create());
+restore.run(["-restore", "test-snapshot", "-table", "test-table-clone-no-wal", "-no-wal-data"])
+enable 'test-table-clone-no-wal'
+
+# Check the differences
+# =============================================================
+scan 'test-table-clone-no-wal', {'LIMIT' => 5}
+puts("Original")
+count 'test-table'
+puts("Clone")
+count 'test-table-clone'
+puts("Clone No WAL")
+count 'test-table-clone-no-wal'
+
+# Alter table adding another family and add some data
+# =============================================================
+puts("Alter orig table...")
+disable 'test-table'
+alter 'test-table', {NAME => 'cf2'}
+enable 'test-table'
+for x in 4..5 do
+  for i in 0..799 do
+      row_key = (Digest::MD5.hexdigest(x.to_s() + i.to_s()))
+      put 'test-table', row_key, 'cf2:q', row_key
+  end
+end
+
+# Check the differences
+# =============================================================
+scan 'test-table', {'LIMIT' => 5}
+count 'test-table'
+count 'test-table-clone'
+count 'test-table-clone-no-wal'
+describe 'test-table'
+
+# Restore to the original table
+# =============================================================
+puts("Rollback the changes...")
+disable 'test-table'
+restore = org.apache.hadoop.hbase.snapshot.tool.RestoreSnapshot.new()
+restore.setConf(org.apache.hadoop.hbase.HBaseConfiguration.create());
+restore.run(["-restore", "test-snapshot"])
+enable 'test-table'
+
+# Check the differences
+scan 'test-table', {'LIMIT' => 5}
+count 'test-table'
+describe 'test-table'
