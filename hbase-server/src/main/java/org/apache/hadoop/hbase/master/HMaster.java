@@ -44,6 +44,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
@@ -105,6 +109,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
@@ -175,6 +180,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistsException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
+import org.apache.hadoop.hbase.snapshot.exception.RenameSnapshotException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -2324,25 +2334,118 @@ Server {
         "Snapshots are not implemented yet."));
   }
 
+  /**
+   * List the currently available/stored snapshots. Any in-progress snapshots are ignored
+   */
   @Override
   public ListSnapshotResponse listSnapshots(RpcController controller, ListSnapshotRequest request)
       throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots are not implemented yet."));
+    try {
+      ListSnapshotResponse.Builder builder = ListSnapshotResponse.newBuilder();
+
+      // first create the snapshot description and check to see if it exists
+      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotDir(this.getMasterFileSystem()
+          .getRootDir());
+      // check to see if the snapshot already exists
+      if (!this.getMasterFileSystem().getFileSystem().exists(snapshotDir)) {
+        return builder.build();
+      }
+
+      FileSystem fs = this.getMasterFileSystem().getFileSystem();
+      FileStatus[] snapshots = fs.listStatus(snapshotDir, new FSUtils.DirFilter(fs));
+      for (FileStatus snapshot : snapshots) {
+        Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
+        // skip all the unfinished snapshots
+        if (!fs.exists(info)) continue;
+        FSDataInputStream in = null;
+        try {
+          in = fs.open(info);
+          SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+          builder.addSnapshots(desc);
+        } catch (IOException e) {
+          LOG.warn("Crashed snapshot " + snapshot.getPath().getName());
+        } finally {
+          if (in != null) {
+            in.close();
+          }
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
   public RenameSnapshotResponse renameSnapshot(RpcController controller,
       RenameSnapshotRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots are not implemented yet."));
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getName(), rootDir);
+    Path newTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(request.getNewName(), rootDir);
+    Path newDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getNewName(), rootDir);
+
+    FileSystem fs = getMasterFileSystem().getFileSystem();
+
+    try {
+      // A snapshot with the same name seems in progress
+      if (fs.exists(newTmpDir)) {
+        LOG.warn("Snapshot " + request.getNewName() + " working directory " + newTmpDir
+            + "still exists, checking progress.");
+        throw new SnapshotExistsException("Snapshot " + request.getName()
+              + " working directory " + newTmpDir);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    try {
+      // Create a new snapshot with the same data
+      if (!FileUtil.copy(fs, snapshotDir, fs, newTmpDir, false, conf)) {
+        throw new RenameSnapshotException("Unable to copy the snapshot metadata");
+      }
+
+      // Switch name and write the new info
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, newTmpDir);
+      snapshot = snapshot.toBuilder().setName(request.getNewName()).build();
+      SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, newTmpDir, fs);
+
+      // Move back the snapshot
+      if (!fs.rename(newTmpDir, newDir)) {
+        LOG.warn("Unable to move snapshot from the working directory " + newTmpDir +
+          " to the completed directory " + newDir);
+        throw new RenameSnapshotException("Unable to move snapshot from the working directory " +
+          newTmpDir + " to the completed directory " + newDir);
+      }
+
+      fs.delete(snapshotDir, true);
+      return RenameSnapshotResponse.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
   public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
       DeleteSnapshotRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots are not implemented yet."));
+    try {
+      String snapshotName = request.getSnapshot().getName();
+      LOG.debug("Deleting snapshot: " + snapshotName);
+      // first create the snapshot description and check to see if it exists
+      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, this
+          .getMasterFileSystem().getRootDir());
+
+      // check to see if the snapshot already exists
+      if (!this.getMasterFileSystem().getFileSystem().exists(snapshotDir)) {
+        LOG.debug("Attempted to delete snapshot:" + snapshotName + ", but doesn't exist.");
+        throw new SnapshotDoesNotExistsException(request.getSnapshot());
+      }
+
+      // delete the existing snapshot
+      this.getMasterFileSystem().getFileSystem().delete(snapshotDir, true);
+      return DeleteSnapshotResponse.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
