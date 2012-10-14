@@ -916,8 +916,8 @@ public class StoreFile extends SchemaConfigured {
    * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
    */
   public static boolean validateStoreFileName(String fileName) {
-    if (HFileLink.isHFileLink(fileName))
-      return true;
+    if (HFileLink.isHFileLink(fileName)) return true;
+    if (fileName.contains(".")) return true;
     return !fileName.contains("-");
   }
 
