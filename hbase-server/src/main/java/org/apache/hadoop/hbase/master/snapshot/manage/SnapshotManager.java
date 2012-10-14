@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.snapshot.manage;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -25,7 +27,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.snapshot.CloneSnapshotHandler;
+import org.apache.hadoop.hbase.master.snapshot.RestoreSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.TableSnapshotHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -54,6 +59,35 @@ import org.apache.zookeeper.KeeperException;
 public class SnapshotManager {
   private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
 
+  public class OperationStatus {
+    private Throwable error = null;
+    private boolean done = false;
+
+    public OperationStatus() {
+    }
+
+    public void completed() {
+      done = true;
+    }
+
+    public void failed(final Throwable e) {
+      done = true;
+      error = e;
+    }
+
+    public boolean isDone() {
+      return done;
+    }
+
+    public boolean isFailed() {
+      return error != null;
+    }
+
+    public Throwable getError() {
+      return error;
+    }
+  }
+
   // TODO - enable having multiple snapshots with multiple monitors
 
   private final MasterServices master;
@@ -61,6 +95,9 @@ public class SnapshotManager {
   private final ExceptionOrchestrator<HBaseSnapshotException> dispatcher;
   private TableSnapshotHandler snapshotHandler;
   private volatile boolean snapshotAborted;
+
+  private final Map<SnapshotDescription, OperationStatus> pendingRestores =
+    new HashMap<SnapshotDescription, OperationStatus>();
 
   public SnapshotManager(final MasterServices master, final ZooKeeperWatcher watcher)
       throws KeeperException {
@@ -158,5 +195,60 @@ public class SnapshotManager {
    */
   ExceptionOrchestrator<HBaseSnapshotException> getExceptionOrchestrator() {
     return this.dispatcher;
+  }
+
+  /**
+   * Create a new restore snapshot handler
+   */
+  public RestoreSnapshotHandler newRestoreSnapshotHandler(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor, long waitTime) throws IOException {
+    RestoreSnapshotHandler handler = new RestoreSnapshotHandler(this.master, this,
+      snapshot, hTableDescriptor, waitTime);
+    this.pendingRestores.put(snapshot, new OperationStatus());
+    return handler;
+  }
+
+  /**
+   * Create a new clone from snapshot handler
+   */
+  public CloneSnapshotHandler newCloneSnapshotHandler(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor, long waitTime) throws IOException {
+    CloneSnapshotHandler handler = new CloneSnapshotHandler(this.master, this,
+      snapshot, hTableDescriptor, waitTime);
+    this.pendingRestores.put(snapshot, new OperationStatus());
+    return handler;
+  }
+
+  /**
+   * @return True if the specified snapshot is in progress
+   */
+  public boolean isRestoreInProcess(final SnapshotDescription snapshot) {
+    OperationStatus status = pendingRestores.get(snapshot);
+    return status != null && !status.isDone();
+  }
+
+  /**
+   * Remove the snapshot from the pending list. Operation done by the master
+   * when the client ask if the restore is finished and the restore operation is done.
+   * @return the restore operation status
+   */
+  public OperationStatus restoreRemove(final SnapshotDescription snapshot) {
+    return this.pendingRestores.remove(snapshot);
+  }
+
+  /**
+   * Called by the restore/clone handler to notify that the restore is completed
+   */
+  public void restoreCompleted(final SnapshotDescription snapshot) {
+    OperationStatus status = this.pendingRestores.get(snapshot);
+    if (status != null) status.completed();
+  }
+
+  /**
+   * Called by the restore/clone handler to notify that the restore is failed
+   */
+  public void restoreFailed(final SnapshotDescription snapshot, final Throwable e) {
+    OperationStatus status = this.pendingRestores.get(snapshot);
+    if (status != null) status.failed(e);
   }
 }

@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -192,11 +193,13 @@ import org.apache.hadoop.hbase.snapshot.exception.RenameSnapshotException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistsException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
 import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -1524,7 +1527,6 @@ Server {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     checkCompression(hTableDescriptor);
@@ -1538,7 +1540,6 @@ Server {
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
-
   }
 
   private void checkCompression(final HTableDescriptor htd)
@@ -2601,14 +2602,63 @@ Server {
   @Override
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
       RestoreSnapshotRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots are not implemented yet."));
+    SnapshotDescription reqSnapshot = request.getSnapshot();
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getSnapshot(), rootDir);
+
+    try {
+      FileSystem fs = this.getMasterFileSystem().getFileSystem();
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+      HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+      String tableName = reqSnapshot.hasTable() ? reqSnapshot.getTable() : snapshot.getTable();
+
+      // Check if the same restore is already running
+      if (snapshotManager.isRestoreInProcess(reqSnapshot)) {
+        String msg = "Restore snapshot=" + snapshot.getName() +
+          " as table=" + tableName + " already in progress";
+        LOG.error(msg);
+        throw new RestoreSnapshotException(msg);
+      }
+
+      long waitTime = RestoreSnapshotHelper.getMaxMasterTimeout(conf,
+        RestoreSnapshotHelper.DEFAULT_MAX_WAIT_TIME);
+
+      // Prepare the restore/clone operation
+      EventHandler handler;
+      if (MetaReader.tableExists(catalogTracker, tableName)) {
+        if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
+          throw new ServiceException(new UnsupportedOperationException(
+            "Table must be disabled to do the restore"));
+        }
+
+        handler = snapshotManager.newRestoreSnapshotHandler(snapshot, snapshotTableDesc, waitTime);
+      } else {
+        HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
+                                                           Bytes.toBytes(tableName));
+        handler = snapshotManager.newCloneSnapshotHandler(snapshot, htd, waitTime);
+      }
+
+      // Submit the restore/clone operation!
+      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+      this.executorService.submit(handler);
+
+      return RestoreSnapshotResponse.newBuilder().setExpectedTime(waitTime).build();
+    } catch (HBaseSnapshotException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
   public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
       IsRestoreSnapshotDoneRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots are not implemented yet."));
+    SnapshotDescription snapshot = request.getSnapshot();
+    boolean done = !this.snapshotManager.isRestoreInProcess(snapshot);
+    if (done) {
+      SnapshotManager.OperationStatus status = this.snapshotManager.restoreRemove(snapshot);
+      if (status != null && status.isFailed()) throw new ServiceException(status.getError());
+    }
+    return IsRestoreSnapshotDoneResponse.newBuilder().setDone(done).build();
   }
 }
