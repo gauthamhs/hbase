@@ -924,6 +924,27 @@ public abstract class FSUtils {
   }
 
   /**
+   * A {@link PathFilter} that returns only regular files.
+   */
+  public static class FileFilter implements PathFilter {
+    private final FileSystem fs;
+
+    public FileFilter(final FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path p) {
+      try {
+        return fs.isFile(p);
+      } catch (IOException e) {
+        LOG.debug("unable to verify if path=" + p + " is a regular file", e);
+        return false;
+      }
+    }
+  }
+
+  /**
    * A {@link PathFilter} that returns directories.
    */
   public static class DirFilter implements PathFilter {
@@ -943,7 +964,7 @@ public abstract class FSUtils {
           isValid = this.fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.debug("unable to verify if path=" + p + " is a directory", e);
       }
       return isValid;
     }
