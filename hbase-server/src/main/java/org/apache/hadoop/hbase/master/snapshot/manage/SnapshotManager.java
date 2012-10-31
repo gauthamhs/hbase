@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.master.snapshot.manage;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,15 +29,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotHandler;
+import org.apache.hadoop.hbase.master.snapshot.CloneSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
+import org.apache.hadoop.hbase.master.snapshot.RestoreSnapshotHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -57,6 +63,9 @@ public class SnapshotManager implements Stoppable {
 
   // TODO - enable having multiple snapshots with multiple monitors
 
+  // Restore Handlers map, with table name as key
+  private Map<String, SnapshotHandler> restoreHandlers = new HashMap<String, SnapshotHandler>();
+
   private final MasterServices master;
   private SnapshotHandler handler;
   private ExecutorService pool;
@@ -73,15 +82,24 @@ public class SnapshotManager implements Stoppable {
 
   /**
    * @return <tt>true</tt> if there is a snapshot currently being taken, <tt>false</tt> otherwise
-   * @throws SnapshotCreationException if the snapshot failed
    */
-  public boolean isTakingSnapshot() throws SnapshotCreationException {
+  public boolean isTakingSnapshot() {
     return handler != null && !handler.isFinished();
   }
 
   /**
+   * @return <tt>true</tt> if there is a snapshot in progress on the specified table.
+   */
+  public boolean isTakingSnapshot(final String tableName) {
+    if (handler != null && handler.getSnapshot().getTable().equals(tableName)) {
+      return !handler.isFinished();
+    }
+    return false;
+  }
+
+  /**
    * Check to make sure that we are OK to run the passed snapshot. Checks to make sure that we
-   * aren't already running a snapshot.
+   * aren't already running a snapshot or restore operation on the target table.
    * @param snapshot description of the snapshot we want to start
    * @throws HBaseSnapshotException if the filesystem could not be prepared to start the snapshot
    */
@@ -93,6 +111,12 @@ public class SnapshotManager implements Stoppable {
     // make sure we aren't already running a snapshot
     if (isTakingSnapshot()) {
       throw new SnapshotCreationException("Already running another snapshot:"
+          + this.handler.getSnapshot(), snapshot);
+    }
+
+    // make sure we aren't running a restore on the same table
+    if (isRestoringTable(snapshot.getTable())) {
+      throw new SnapshotCreationException("Restore in progress on the same table snapshot:"
           + this.handler.getSnapshot(), snapshot);
     }
 
@@ -158,6 +182,94 @@ public class SnapshotManager implements Stoppable {
     return this.handler;
   }
 
+  /**
+   * Restore the specified snapshot.
+   * The restore will fail if the destination table has a snapshot or restore in progress.
+   *
+   * @param snapshot Snapshot Descriptor
+   * @param hTableDescriptor Table Descriptor of the table to create
+   * @param waitTime timeout before considering the clone failed
+   */
+  public synchronized void cloneSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor, long waitTime) throws HBaseSnapshotException {
+    String tableName = hTableDescriptor.getNameAsString();
+
+    // make sure we aren't running a snapshot on the same table
+    if (isTakingSnapshot(tableName)) {
+      throw new RestoreSnapshotException("Snapshot in progress on the restore table=" + tableName);
+    }
+
+    // make sure we aren't running a restore on the same table
+    if (isRestoringTable(tableName)) {
+      throw new RestoreSnapshotException("Restore already in progress on the table=" + tableName);
+    }
+
+    try {
+      CloneSnapshotHandler handler =
+        new CloneSnapshotHandler(master, snapshot, hTableDescriptor, waitTime);
+      this.pool.submit(handler);
+      restoreHandlers.put(tableName, handler);
+    } catch (Exception e) {
+      String msg = "Couldn't clone the snapshot=" + snapshot + " on table=" + tableName;
+      LOG.error(msg, e);
+      throw new RestoreSnapshotException(msg, e);
+    }
+  }
+
+  /**
+   * Restore the specified snapshot.
+   * The restore will fail if the destination table has a snapshot or restore in progress.
+   *
+   * @param snapshot Snapshot Descriptor
+   * @param hTableDescriptor Table Descriptor
+   * @param waitTime timeout before considering the restore failed
+   */
+  public synchronized void restoreSnapshot(final SnapshotDescription snapshot,
+      final HTableDescriptor hTableDescriptor, long waitTime) throws HBaseSnapshotException {
+    String tableName = hTableDescriptor.getNameAsString();
+
+    // make sure we aren't running a snapshot on the same table
+    if (isTakingSnapshot(tableName)) {
+      throw new RestoreSnapshotException("Snapshot in progress on the restore table=" + tableName);
+    }
+
+    // make sure we aren't running a restore on the same table
+    if (isRestoringTable(tableName)) {
+      throw new RestoreSnapshotException("Restore already in progress on the table=" + tableName);
+    }
+
+    try {
+      RestoreSnapshotHandler handler =
+        new RestoreSnapshotHandler(master, snapshot, hTableDescriptor, waitTime);
+      this.pool.submit(handler);
+      restoreHandlers.put(hTableDescriptor.getNameAsString(), handler);
+    } catch (Exception e) {
+      String msg = "Couldn't restore the snapshot=" + snapshot + " on table=" + tableName;
+      LOG.error(msg, e);
+      throw new RestoreSnapshotException(msg, e);
+    }
+  }
+
+  /**
+   * Verify if the the restore of the specified table is in progress.
+   *
+   * @param tableName table under restore
+   * @return <tt>true</tt> if there is a restore in progress of the specified table.
+   */
+  public boolean isRestoringTable(final String tableName) {
+    SnapshotHandler sentinel = restoreHandlers.get(tableName);
+    return(sentinel != null && !sentinel.isFinished());
+  }
+
+  /**
+   * Get the restore snapshot handler for the specified table
+   * @param tableName table under restore
+   * @return the restore snapshot handler
+   */
+  public SnapshotHandler getRestoreSnapshotHandler(final String tableName) {
+    return restoreHandlers.get(tableName);
+  }
+
   @Override
   public void stop(String why) {
     // short circuit
@@ -166,6 +278,10 @@ public class SnapshotManager implements Stoppable {
     this.stopped = true;
     // pass the stop onto all the listeners
     if (this.handler != null) this.handler.stop(why);
+    // pass the stop onto all the restore handlers
+    for (SnapshotHandler restoreHandler: this.restoreHandlers.values()) {
+      restoreHandler.stop(why);
+    }
   }
 
   @Override

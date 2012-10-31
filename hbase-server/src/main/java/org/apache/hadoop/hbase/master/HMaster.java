@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -182,11 +183,13 @@ import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
 import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -2558,18 +2561,102 @@ Server {
     }
   }
 
+  /**
+   * Execute Restore/Clone snapshot operation.
+   *
+   * <p>If the specified table exists a "Restore" is executed, replacing the table
+   * schema and directory data with the content of the snapshot.
+   * The table must be disabled, or a UnsupportedOperationException will be thrown.
+   *
+   * <p>If the table doesn't exist a "Clone" is executed, a new table is created
+   * using the schema at the time of the snapshot, and the content of the snapshot.
+   *
+   * <p>The restore/clone operation does not require copying HFiles. Since HFiles
+   * are immutable the table can point to and use the same files as the original one.
+   */
   @Override
   public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
       RestoreSnapshotRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots restore is not implemented yet."));
+    SnapshotDescription reqSnapshot = request.getSnapshot();
+    FileSystem fs = this.getMasterFileSystem().getFileSystem();
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getSnapshot(), rootDir);
+
+    try {
+      // check if the snapshot exists
+      if (!fs.exists(snapshotDir)) {
+        LOG.error("A Snapshot named '" + reqSnapshot.getName() + "'' doesn't exists.");
+        throw new SnapshotDoesNotExistException(reqSnapshot.getName());
+      }
+
+      // read snapshot information
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+      HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+      String tableName = reqSnapshot.getTable();
+
+      long waitTime = RestoreSnapshotHelper.getMaxMasterTimeout(conf,
+        RestoreSnapshotHelper.DEFAULT_MAX_WAIT_TIME);
+
+      // Execute the restore/clone operation
+      if (MetaReader.tableExists(catalogTracker, tableName)) {
+        if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
+          throw new ServiceException(new UnsupportedOperationException(
+            "Table '" + snapshot.getTable() + "' must be disabled to do the restore"));
+        }
+
+        snapshotManager.restoreSnapshot(snapshot, snapshotTableDesc, waitTime);
+        LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+      } else {
+        HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
+                                                           Bytes.toBytes(tableName));
+        snapshotManager.cloneSnapshot(snapshot, htd, waitTime);
+        LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
+      }
+
+      return RestoreSnapshotResponse.newBuilder().setExpectedTimeout(waitTime).build();
+    } catch (HBaseSnapshotException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
+  /**
+   * Returns the status of the requested snapshot restore/clone operation.
+   * This method is not exposed to the user, it is just used internally
+   * to verify if the restore is completed.
+   *
+   * No exceptions are thrown if the restore is not running,
+   * the result will be "not done".
+   *
+   * @return done <tt>true</tt> if the restore/clone operation is completed.
+   * @throws RestoreSnapshotExcepton if the operation failed.
+   */
   @Override
   public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
       IsRestoreSnapshotDoneRequest request) throws ServiceException {
-    throw new ServiceException(new UnsupportedOperationException(
-        "Snapshots restore is not implemented yet."));
+    try {
+      SnapshotDescription snapshot = request.getSnapshot();
+      SnapshotHandler sentinel = this.snapshotManager.getRestoreSnapshotHandler(snapshot.getTable());
+      IsRestoreSnapshotDoneResponse.Builder builder = IsRestoreSnapshotDoneResponse.newBuilder();
+      LOG.debug("Verify snapshot=" + snapshot.getName() + " against=" + sentinel.getSnapshot().getName() +
+        " table=" + snapshot.getTable());
+      if (sentinel != null && sentinel.getSnapshot().getName().equals(snapshot.getName())) {
+        HBaseSnapshotException e = sentinel.getExceptionIfFailed();
+        if (e != null) throw e;
+
+        // check to see if we are done
+        if (sentinel.isFinished()) {
+          builder.setDone(true);
+          LOG.debug("Restore snapshot=" + snapshot + " has completed, notifying client.");
+        } else if (LOG.isDebugEnabled()) {
+          LOG.debug("Sentinel isn't finished with restore snapshot=" + snapshot);
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 }
 
