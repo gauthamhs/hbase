@@ -17,23 +17,25 @@
  */
 package org.apache.hadoop.hbase.snapshot.exception;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 
 /**
- * Thrown when a snapshot exists but should not
+ * Thrown when a snapshot could not be renamed due to an error during the operation.
  */
 @SuppressWarnings("serial")
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class SnapshotExistsException extends HBaseSnapshotException {
+public class RenameSnapshotException extends HBaseSnapshotException {
+
   /**
-   * Failure due to the snapshot already existing
-   * @param msg full description of the failure
-   * @param desc snapshot that was attempted
+   * @param msg message describing the exception
    */
-  public SnapshotExistsException(String msg, SnapshotDescription desc) {
-    super(msg, desc);
+  public RenameSnapshotException(String msg) {
+    super(msg);
+  }
+
+  /**
+   * @param message message describing the exception
+   * @param e cause
+   */
+  public RenameSnapshotException(String message, Exception e) {
+    super(message, e);
   }
 }
