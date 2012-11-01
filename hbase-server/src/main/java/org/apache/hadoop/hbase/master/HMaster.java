@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableBusyException;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -1520,6 +1521,7 @@ Server {
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     checkCompression(hTableDescriptor);
+    checkTableNotBusy(hTableDescriptor.getName());
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1593,6 +1595,7 @@ Server {
     byte [] tableName = request.getTableName().toByteArray();
     try {
       checkInitialized();
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         cpHost.preDeleteTable(tableName);
       }
@@ -1642,6 +1645,7 @@ Server {
 
     try {
       checkInitialized();
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         if (cpHost.preAddColumn(tableName, column)) {
           return AddColumnResponse.newBuilder().build();
@@ -1665,6 +1669,7 @@ Server {
     try {
       checkInitialized();
       checkCompression(descriptor);
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         if (cpHost.preModifyColumn(tableName, descriptor)) {
           return ModifyColumnResponse.newBuilder().build();
@@ -1687,6 +1692,7 @@ Server {
     final byte [] columnName = req.getColumnName().toByteArray();
     try {
       checkInitialized();
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         if (cpHost.preDeleteColumn(tableName, columnName)) {
           return DeleteColumnResponse.newBuilder().build();
@@ -1708,6 +1714,7 @@ Server {
     byte [] tableName = request.getTableName().toByteArray();
     try {
       checkInitialized();
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         cpHost.preEnableTable(tableName);
       }
@@ -1729,6 +1736,7 @@ Server {
     byte [] tableName = request.getTableName().toByteArray();
     try {
       checkInitialized();
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         cpHost.preDisableTable(tableName);
       }
@@ -1787,6 +1795,7 @@ Server {
     try {
       checkInitialized();
       checkCompression(htd);
+      checkTableNotBusy(tableName);
       if (cpHost != null) {
         cpHost.preModifyTable(tableName, htd);
       }
@@ -2268,6 +2277,25 @@ Server {
       }
     }
     return builder.build();
+  }
+
+  /**
+   * @return true if the table is busy executing another operation.
+   */
+  private boolean isTableBusy(final byte[] tableName) {
+    String table = Bytes.toString(tableName);
+    return snapshotManager.isTakingSnapshot(table) ||
+           snapshotManager.isRestoringTable(table);
+  }
+
+  /**
+   * @throw TableBusyException if the table is busy with another operation
+   */
+  private void checkTableNotBusy(final byte[] tableName) throws TableBusyException {
+    if (isTableBusy(tableName)) {
+      throw new TableBusyException(
+        "another operation is currently in progress on table=" + tableName);
+    }
   }
 
   /**
