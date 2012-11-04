@@ -194,16 +194,6 @@ public class SnapshotDescriptionUtils {
   }
 
   /**
-   * Get the snapshot root directory. All the snapshots are kept under this directory, i.e.
-   * ${hbase.rootdir}/.snapshot
-   * @param rootDir hbase root directory
-   * @return the base directory in which all snapshots are kept
-   */
-  public static Path getSnapshotRootDir(final Path rootDir) {
-    return new Path(rootDir, HConstants.SNAPSHOT_DIR_NAME);
-  }
-
-  /**
    * Get the directory for a specified snapshot. This directory is a sub-directory of snapshot root
    * directory and all the data files for a snapshot are kept under this directory.
    * @param snapshot snapshot being taken
@@ -232,8 +222,7 @@ public class SnapshotDescriptionUtils {
    * @return {@link Path} where one can build a snapshot
    */
   public static Path getWorkingSnapshotDir(SnapshotDescription snapshot, final Path rootDir) {
-    return getCompletedSnapshotDir(new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME),
-      snapshot.getName());
+    return getCompletedSnapshotDir(getSnapshotTmpDir(rootDir), snapshot.getName());
   }
 
   /**
@@ -243,8 +232,7 @@ public class SnapshotDescriptionUtils {
    * @return {@link Path} where one can build a snapshot
    */
   public static Path getWorkingSnapshotDir(String snapshotName, final Path rootDir) {
-    return getCompletedSnapshotDir(new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME),
-      snapshotName);
+    return getCompletedSnapshotDir(getSnapshotTmpDir(rootDir), snapshotName);
   }
 
   /**
@@ -263,6 +251,14 @@ public class SnapshotDescriptionUtils {
    */
   public static final Path getSnapshotsDir(Path rootDir) {
     return new Path(rootDir, HConstants.SNAPSHOT_DIR_NAME);
+  }
+
+  /**
+   * @param rootDir hbase root directory
+   * @return the directory for all in-progress snapshots;
+   */
+  public static Path getSnapshotTmpDir(final Path rootDir) {
+    return new Path(getSnapshotsDir(rootDir), SNAPSHOT_TMP_DIR_NAME);
   }
 
   /**

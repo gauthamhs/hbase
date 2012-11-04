@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSDiskOperationLock;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -88,18 +89,24 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
+    MasterFileSystem fileSystemManager = masterServices.getMasterFileSystem();
+    FileSystem fs = fileSystemManager.getFileSystem();
+    Path rootDir = fileSystemManager.getRootDir();
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, tableName);
+    Path lockFile = FSDiskOperationLock.getTableOperationLockFile(tableDir);
+
     try {
       timer.start();
+
+      FSDiskOperationLock oplock = new FSDiskOperationLock(
+        FSDiskOperationLock.Type.RESTORE_TABLE, snapshot.getName());
+      oplock.write(fs, lockFile);
 
       // Update descriptor
       this.masterServices.getTableDescriptors().add(hTableDescriptor);
 
       Configuration conf = masterServices.getConfiguration();
       CatalogTracker catalogTracker = masterServices.getCatalogTracker();
-      MasterFileSystem fileSystemManager = masterServices.getMasterFileSystem();
-      FileSystem fs = fileSystemManager.getFileSystem();
-      Path rootDir = fileSystemManager.getRootDir();
-      Path tableDir = HTableDescriptor.getTableDir(rootDir, tableName);
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
 
       byte[] tableName = hTableDescriptor.getName();
@@ -124,6 +131,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       throw new RestoreSnapshotException(msg, e);
     } finally {
       this.finished = true;
+      fs.delete(lockFile, false);
     }
   }
 

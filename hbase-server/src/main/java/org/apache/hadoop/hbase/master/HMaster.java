@@ -198,6 +198,7 @@ import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.FSDiskOperationLock;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -714,6 +715,10 @@ Server {
     if (!masterRecovery) {
       this.assignmentManager.startTimeOutMonitor();
     }
+
+    // fix pending filesystem operations
+    fixPendingFileSystemOperations(this.fileSystemManager);
+
     // TODO: Should do this in background rather than block master startup
     status.setStatus("Splitting logs after master startup");
     splitLogAfterStartup(this.fileSystemManager);
@@ -784,6 +789,51 @@ Server {
    */
   protected void splitLogAfterStartup(final MasterFileSystem mfs) {
     mfs.splitLogAfterStartup();
+  }
+
+  /**
+   * Fix the pending file-system related operations
+   *  - create table: remove the table if failed (rollback)
+   *  - delete table: finsh removing the table (rollforward)
+   *  - clone table: remove the table if failed (rollback)
+   *  - restore table: finish restoring the table (rollforward)
+   *  - snapshot: removing the tmp folder (rollback)
+   *
+   * @param mfs Master File System
+   */
+  protected void fixPendingFileSystemOperations(final MasterFileSystem mfs)
+      throws IOException {
+    FileSystem fs = mfs.getFileSystem();
+
+    // fix incomplete table operations
+    for (Path tableDir: FSUtils.getTableDirs(fs, mfs.getRootDir())) {
+      Path lockFile = FSDiskOperationLock.getTableOperationLockFile(tableDir);
+      if (!fs.exists(lockFile)) continue;
+
+      byte[] tableName = Bytes.toBytes(tableDir.getName());
+      FSDiskOperationLock oplock = FSDiskOperationLock.read(fs, lockFile);
+      switch (oplock.getType()) {
+        case CREATE_TABLE:
+        case DELETE_TABLE:
+        case CLONE_TABLE:
+          // remove the half on-disk tables
+          new DeleteTableHandler(tableName, this, this).process();
+          break;
+        case RESTORE_TABLE:
+          // finish restoring the table
+          snapshotManager.recoverRestoreFailure(tableDir, oplock.getSource());
+          break;
+      }
+
+      // Remove lock file
+      fs.delete(lockFile);
+    }
+
+    // remove snapshot .tmp
+    Path snapshotTmpDir = SnapshotDescriptionUtils.getSnapshotTmpDir(mfs.getRootDir());
+    if (fs.exists(snapshotTmpDir)) {
+      fs.delete(snapshotTmpDir, true);
+    }
   }
 
   /**

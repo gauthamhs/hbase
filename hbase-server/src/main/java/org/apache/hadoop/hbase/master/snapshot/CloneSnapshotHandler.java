@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSDiskOperationLock;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -84,14 +85,19 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
 
   @Override
   protected List<HRegionInfo> handleCreateRegions() throws IOException, KeeperException {
+    FileSystem fs = fileSystemManager.getFileSystem();
+    Path rootDir = fileSystemManager.getRootDir();
     byte[] tableName = hTableDescriptor.getName();
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, tableName);
+    Path lockFile = FSDiskOperationLock.getTableOperationLockFile(tableDir);
 
     try {
       timer.start();
 
-      FileSystem fs = fileSystemManager.getFileSystem();
-      Path rootDir = fileSystemManager.getRootDir();
-      Path tableDir = HTableDescriptor.getTableDir(rootDir, tableName);
+      FSDiskOperationLock oplock = new FSDiskOperationLock(
+        FSDiskOperationLock.Type.CLONE_TABLE, snapshot.getName());
+      oplock.write(fs, lockFile);
+
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
 
       // Execute the Clone
@@ -112,6 +118,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
       throw new RestoreSnapshotException(msg, e);
     } finally {
       this.finished = true;
+      fs.delete(lockFile, false);
     }
   }
 
