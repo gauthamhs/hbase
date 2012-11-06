@@ -73,7 +73,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   protected abstract boolean validate(Path file);
 
   /**
-   * Instanitate and initialize all the file cleaners set in the configuration
+   * Instantiate and initialize all the file cleaners set in the configuration
    * @param confKey key to get the file cleaner classes from the configuration
    */
   private void initCleanerChain(String confKey) {
@@ -129,7 +129,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
         }
       }
     } catch (IOException e) {
-      LOG.warn("Failed to get status of:" + oldFileDir);
+      LOG.warn("Failed to get status of: " + oldFileDir);
     }
 
   }
@@ -175,7 +175,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * @throws IOException
    */
   private FileStatus[] checkAndDeleteDirectory(Path toCheck) throws IOException {
-    LOG.debug("Attempting to delete directory:" + toCheck);
+    LOG.debug("Attempting to delete directory: " + toCheck);
     // if it doesn't exist, we are done
     if (!fs.exists(toCheck)) return null;
     // get the files below the directory
@@ -208,21 +208,21 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     }
     for (T cleaner : cleanersChain) {
       if (cleaner.isStopped()) {
-        LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any file in:"
+        LOG.warn("A file cleaner " + this.getName() + " is stopped, won't delete any file in: "
             + this.oldFileDir);
         return;
       }
 
       if (!cleaner.isFileDeletable(filePath)) {
         // this file is not deletable, then we are done
-        LOG.debug(filePath + " is not deletable according to:" + cleaner);
+        LOG.debug(filePath + " is not deletable according to: " + cleaner);
         return;
       }
     }
     // delete this file if it passes all the cleaners
-    LOG.debug("Removing:" + filePath + " from archive");
+    LOG.debug("Removing: " + filePath + " from archive");
     if (!this.fs.delete(filePath, false)) {
-      LOG.warn("Attempted to delete:" + filePath
+      LOG.warn("Attempted to delete: " + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
     }
   }
