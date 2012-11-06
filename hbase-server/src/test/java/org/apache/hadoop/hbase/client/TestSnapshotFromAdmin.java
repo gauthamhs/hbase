@@ -98,7 +98,7 @@ public class TestSnapshotFromAdmin {
 
     // setup the admin and run the test
     HBaseAdmin admin = new HBaseAdmin(mockConnection);
-    String snapshot = "snasphot";
+    String snapshot = "snapshot";
     String table = "table";
     // get start time
     long start = System.currentTimeMillis();

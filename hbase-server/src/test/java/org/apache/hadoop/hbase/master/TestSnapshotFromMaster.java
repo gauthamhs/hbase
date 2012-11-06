@@ -166,7 +166,7 @@ public class TestSnapshotFromMaster {
     Path root = master.getMasterFileSystem().getRootDir();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, root);
     desc = desc.toBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnasphotInfo(desc, snapshotDir, fs);
+    SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshotDir, fs);
 
     builder.setSnapshot(desc);
     response = master.isSnapshotDone(null, builder.build());
@@ -184,7 +184,7 @@ public class TestSnapshotFromMaster {
     String snapshotName = "completed";
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, snapshotDir, fs);
+    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
 
     // check that we get one snapshot
     response = master.listSnapshots(null, request);
@@ -197,7 +197,7 @@ public class TestSnapshotFromMaster {
     snapshotName = "completed_two";
     snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     snapshot = SnapshotDescription.newBuilder().setName(snapshotName).build();
-    SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, snapshotDir, fs);
+    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
     expected.add(snapshot);
 
     // check that we get one snapshot
@@ -224,7 +224,7 @@ public class TestSnapshotFromMaster {
 
     // write one snapshot to the fs
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, snapshotDir, fs);
+    SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, snapshotDir, fs);
 
     // then delete the existing snapshot,which shouldn't cause an exception to be thrown
     master.deleteSnapshot(null, request);

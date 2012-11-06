@@ -117,7 +117,7 @@ public class DisabledTableSnapshotHandler extends EventHandler implements Snapsh
     try {
       timer.start();
       // write down the snapshot info in the working directory
-      SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, workingDir, this.fs);
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, this.fs);
 
       // 1. get all the regions hosting this table.
       List<Pair<HRegionInfo, ServerName>> regionsAndLocations = null;

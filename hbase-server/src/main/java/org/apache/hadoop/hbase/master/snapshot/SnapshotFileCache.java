@@ -187,7 +187,7 @@ public class SnapshotFileCache implements Stoppable {
     try {
       status = fs.getFileStatus(snapshotDir);
     } catch (FileNotFoundException e) {
-      LOG.warn("Snasphot directory: " + snapshotDir + " doesn't exist");
+      LOG.warn("Snapshot directory: " + snapshotDir + " doesn't exist");
       return;
     }
     // if the snapshot directory wasn't modified since we last check, we are done

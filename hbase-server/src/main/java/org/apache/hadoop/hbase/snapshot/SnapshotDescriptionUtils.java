@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * 
  * <pre>
  * /hbase/.snapshots/completed
- *                   .snapshotinfo          <--- Description of the snasphot
+ *                   .snapshotinfo          <--- Description of the snapshot
  *                   .tableinfo             <--- Copy of the tableinfo
  *                    /.logs
  *                        /[server_name]
@@ -286,10 +286,10 @@ public class SnapshotDescriptionUtils {
         long increment = conf.getLong(
           SnapshotDescriptionUtils.TIMESTAMP_SNAPSHOT_SPLIT_POINT_ADDITION,
           SnapshotDescriptionUtils.DEFAULT_TIMESTAMP_SNAPSHOT_SPLIT_IN_FUTURE);
-        LOG.debug("Setting timestamp snasphot in future by " + increment + " ms.");
+        LOG.debug("Setting timestamp snapshot in future by " + increment + " ms.");
         time += increment;
       }
-      LOG.debug("Creation time not specified, setting to:" + time + " (current time:"
+      LOG.debug("Creation time not specified, setting to: " + time + " (current time: "
           + EnvironmentEdgeManager.currentTimeMillis() + ").");
       SnapshotDescription.Builder builder = snapshot.toBuilder();
       builder.setCreationTime(time);
@@ -306,7 +306,7 @@ public class SnapshotDescriptionUtils {
    * @throws IOException if we can't reach the filesystem and the file cannot be cleaned up on
    *           failure
    */
-  public static void writeSnasphotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
+  public static void writeSnapshotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
       throws IOException {
     FsPermission perms = FSUtils.getFilePermissions(fs, fs.getConf(),
       HConstants.DATA_FILE_UMASK_KEY);
@@ -347,16 +347,16 @@ public class SnapshotDescriptionUtils {
         if (in != null) in.close();
       }
     } catch (FileNotFoundException e) {
-      throw new CorruptedSnapshotException("Snapshot " + snapshotInfo + " doesn't exists.", e);
+      throw new CorruptedSnapshotException("Snapshot " + snapshotInfo + " does not exist.", e);
     } catch (IOException e) {
-      throw new CorruptedSnapshotException("Couldn't read snapshot info from:" + snapshotInfo, e);
+      throw new CorruptedSnapshotException("Could not read snapshot information from:" + snapshotInfo, e);
     }
   }
 
   /**
    * Move the finished snapshot to its final, publicly visible directory - this marks the snapshot
    * as 'complete'.
-   * @param snapshot description of the snapshot being tabken
+   * @param snapshot description of the snapshot being taken
    * @param rootdir root directory of the hbase installation
    * @param workingDir directory where the in progress snapshot was built
    * @param fs {@link FileSystem} where the snapshot was built
@@ -366,11 +366,11 @@ public class SnapshotDescriptionUtils {
   public static void completeSnapshot(SnapshotDescription snapshot, Path rootdir, Path workingDir,
       FileSystem fs) throws SnapshotCreationException, IOException {
     Path finishedDir = getCompletedSnapshotDir(snapshot, rootdir);
-    LOG.debug("Snapshot is done, just moving the snapshot from " + workingDir + " to "
+    LOG.debug("Snapshot is done. Moving the snapshot from " + workingDir + " to "
         + finishedDir);
     if (!fs.rename(workingDir, finishedDir)) {
-      throw new SnapshotCreationException("Failed to move working directory(" + workingDir
-          + ") to completed directory(" + finishedDir + ").", snapshot);
+      throw new SnapshotCreationException("Failed to move working directory (" + workingDir
+          + ") to completed directory (" + finishedDir + ").", snapshot);
     }
   }
 }
