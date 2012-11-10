@@ -32,6 +32,14 @@ public class SnapshotExistsException extends HBaseSnapshotException {
   /**
    * Failure due to the snapshot already existing
    * @param msg full description of the failure
+   */
+  public SnapshotExistsException(String msg) {
+    super(msg);
+  }
+
+  /**
+   * Failure due to the snapshot already existing
+   * @param msg full description of the failure
    * @param desc snapshot that was attempted
    */
   public SnapshotExistsException(String msg, SnapshotDescription desc) {
