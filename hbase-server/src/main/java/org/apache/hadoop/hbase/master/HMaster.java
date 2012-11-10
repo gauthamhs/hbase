@@ -48,6 +48,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
@@ -150,6 +151,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
@@ -182,6 +185,7 @@ import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RenameSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistException;
@@ -2466,6 +2470,63 @@ Server {
         }
       }
       return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RenameSnapshotResponse renameSnapshot(RpcController controller,
+      RenameSnapshotRequest request) throws ServiceException {
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getName(), rootDir);
+    Path newTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(request.getNewName(), rootDir);
+    Path newDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getNewName(), rootDir);
+
+    FileSystem fs = getMasterFileSystem().getFileSystem();
+    try {
+      if (!fs.exists(snapshotDir)) {
+        LOG.error("A Snapshot named '" + request.getName() + "' does not exist.");
+        throw new SnapshotDoesNotExistException(request.getName());
+      }
+
+      // A snapshot with the same name already exists
+      if (fs.exists(newDir)) {
+        SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, newDir);
+        String msg = "A Snapshot named '" + request.getNewName() + "' already exists.";
+        LOG.error(msg);
+        throw new SnapshotExistsException(msg, snapshot);
+      }
+
+      // A snapshot with the same name seems in progress
+      if (fs.exists(newTmpDir)) {
+        SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+        String msg = "Snapshot " + request.getNewName() + " working directory " + newTmpDir
+            + "still exists. Checking progress.";
+        LOG.error(msg);
+        throw new SnapshotExistsException(msg, snapshot);
+      }
+
+      // Create a new snapshot with the same data
+      if (!FileUtil.copy(fs, snapshotDir, fs, newTmpDir, false, conf)) {
+        throw new RenameSnapshotException("Unable to copy the snapshot metadata.");
+      }
+
+      // Switch name and write the new info
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, newTmpDir);
+      snapshot = snapshot.toBuilder().setName(request.getNewName()).build();
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, newTmpDir, fs);
+
+      // Move back the snapshot
+      if (!fs.rename(newTmpDir, newDir)) {
+        LOG.warn("Unable to move snapshot from the working directory " + newTmpDir +
+          " to the completed directory " + newDir);
+        throw new RenameSnapshotException("Unable to move snapshot from the working directory " +
+          newTmpDir + " to the completed directory " + newDir);
+      }
+
+      fs.delete(snapshotDir, true);
+      return RenameSnapshotResponse.newBuilder().build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
