@@ -933,13 +933,14 @@ public abstract class FSUtils {
       this.fs = fs;
     }
 
+    @Override
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
         if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
           isValid = false;
         } else {
-            isValid = this.fs.getFileStatus(p).isDir();
+          isValid = this.fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
         e.printStackTrace();
@@ -947,6 +948,7 @@ public abstract class FSUtils {
       return isValid;
     }
   }
+
 
   /**
    * Heuristic to determine whether is safe or not to open a file for append
@@ -1287,19 +1289,6 @@ public abstract class FSUtils {
   }
 
   /**
-   * Log the current state of the filesystem from a certain root directory
-   * @param fs filesystem to investigate
-   * @param root root file/directory to start logging from
-   * @param LOG log to output information
-   * @throws IOException if an unexpected exception occurs
-   */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
-      throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(LOG, fs, root, "|-");
-  }
-
-  /**
    * Throw an exception if an action is not permitted by a user on a file.
    * 
    * @param ugi
@@ -1333,6 +1322,19 @@ public abstract class FSUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Log the current state of the filesystem from a specified 'root' directory
+   * @param fs filesystem to investigate
+   * @param root root file/directory to start searching from
+   * @param LOG log to output information
+   * @throws IOException if an unexpected exception occurs
+   */
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+      throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(LOG, fs, root, "|-");
   }
 
   /**
