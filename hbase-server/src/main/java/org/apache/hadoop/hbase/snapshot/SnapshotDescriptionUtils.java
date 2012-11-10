@@ -297,10 +297,10 @@ public class SnapshotDescriptionUtils {
         long increment = conf.getLong(
           SnapshotDescriptionUtils.TIMESTAMP_SNAPSHOT_SPLIT_POINT_ADDITION,
           SnapshotDescriptionUtils.DEFAULT_TIMESTAMP_SNAPSHOT_SPLIT_IN_FUTURE);
-        LOG.debug("Setting timestamp snasphot in future by " + increment + " ms.");
+        LOG.debug("Setting timestamp snapshot in future by " + increment + " ms.");
         time += increment;
       }
-      LOG.debug("Creation time not specified, setting to:" + time + " (current time:"
+      LOG.debug("Creation time not specified, setting to: " + time + " (current time: "
           + EnvironmentEdgeManager.currentTimeMillis() + ").");
       SnapshotDescription.Builder builder = snapshot.toBuilder();
       builder.setCreationTime(time);
@@ -358,7 +358,7 @@ public class SnapshotDescriptionUtils {
         if (in != null) in.close();
       }
     } catch (IOException e) {
-      throw new CorruptedSnapshotException("Couldn't read snapshot info from:" + snapshotInfo, e);
+      throw new CorruptedSnapshotException("Could not read snapshot info from: " + snapshotInfo, e);
     }
   }
 
@@ -375,10 +375,9 @@ public class SnapshotDescriptionUtils {
   public static void completeSnapshot(SnapshotDescription snapshot, Path rootdir, Path workingDir,
       FileSystem fs) throws SnapshotCreationException, IOException {
     Path finishedDir = getCompletedSnapshotDir(snapshot, rootdir);
-    LOG.debug("Snapshot is done, just moving the snapshot from " + workingDir + " to "
-        + finishedDir);
+    LOG.debug("Snapshot is done, Moving the snapshot from " + workingDir + " to " + finishedDir);
     if (!fs.rename(workingDir, finishedDir)) {
-      throw new SnapshotCreationException("Failed to move working directory(" + workingDir
+      throw new SnapshotCreationException("Failed to move working directory (" + workingDir
           + ") to completed directory(" + finishedDir + ").", snapshot);
     }
   }

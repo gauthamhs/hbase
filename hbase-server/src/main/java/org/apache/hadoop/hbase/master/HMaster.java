@@ -2380,7 +2380,7 @@ Server {
     try {
       desc = this.tableDescriptors.get(snapshot.getTable());
     } catch (FileNotFoundException e) {
-      String msg = "Table:" + snapshot.getTable() + " info doesn't exist!";
+      String msg = "Table '" + snapshot.getTable() + "' info does not exist!";
       LOG.error(msg);
       throw new ServiceException(new SnapshotCreationException(msg, e, snapshot));
     } catch (IOException e) {
@@ -2453,7 +2453,7 @@ Server {
         Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
         // if the snapshot is bad
         if (!fs.exists(info)) {
-          LOG.error("Snapshot information for " + snapshot.getPath() + " doesn't exist");
+          LOG.error("Snapshot information for " + snapshot.getPath() + " does not exist");
           continue;
         }
         FSDataInputStream in = null;
@@ -2549,7 +2549,7 @@ Server {
 
       // delete the existing snapshot
       if (!this.getMasterFileSystem().getFileSystem().delete(snapshotDir, true)) {
-        throw new ServiceException("Failed to delete snapshot directory: " + snapshotDir);
+        throw new ServiceException("Failed to delete the snapshot directory: " + snapshotDir);
       }
       return DeleteSnapshotResponse.newBuilder().build();
     } catch (IOException e) {
@@ -2560,12 +2560,12 @@ Server {
   @Override
   public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
       IsSnapshotDoneRequest request) throws ServiceException {
-    LOG.debug("Checking to see if snapshot from request:" + request + " is done");
+    LOG.debug("Checking to see if the snapshot from request: " + request + " is done");
     try {
       // check the request to make sure it has a snapshot
       if (!request.hasSnapshot()) {
-        throw new UnknownSnapshotException(
-            "No snapshot name passed in request, can't figure out which snapshot you want to check.");
+        throw new UnknownSnapshotException("There was no snapshot name supplied in the request." +
+          " Cannot figure out which snapshot you would like to check.");
       }
 
       SnapshotDescription expected = request.getSnapshot();
@@ -2583,7 +2583,7 @@ Server {
         SnapshotDescription snapshot = sentinel.getSnapshot();
         LOG.debug("Have a snapshot to compare:" + snapshot);
         if (expected.getName().equals(snapshot.getName())) {
-          LOG.trace("Running snapshot (" + snapshot.getName() + ") does match request:"
+          LOG.trace("Running snapshot (" + snapshot.getName() + ") does match request: "
               + expected.getName());
 
           // check to see if we are done
@@ -2591,7 +2591,7 @@ Server {
             builder.setDone(true);
             LOG.debug("Snapshot " + snapshot + " has completed, notifying client.");
           } else if (LOG.isDebugEnabled()) {
-            LOG.debug("Sentinel isn't finished with snapshot!");
+            LOG.debug("Sentinel is not yet finished with the snapshot!");
           }
           return builder.build();
         }
@@ -2600,7 +2600,7 @@ Server {
 
       // check to see if the snapshot is already on the fs
       if (!isSnapshotCompleted(expected)) {
-        throw new UnknownSnapshotException("Snapshot:" + expected.getName()
+        throw new UnknownSnapshotException("Snapshot: " + expected.getName()
             + " is not currently running or one of the known completed snapshots.");
       }
 
