@@ -10847,6 +10847,10 @@ public final class HBaseProtos {
     // optional .SnapshotDescription.Type type = 4 [default = TIMESTAMP];
     boolean hasType();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type getType();
+    
+    // optional int32 version = 5;
+    boolean hasVersion();
+    int getVersion();
   }
   public static final class SnapshotDescription extends
       com.google.protobuf.GeneratedMessage
@@ -10878,20 +10882,23 @@ public final class HBaseProtos {
     
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
-      TIMESTAMP(0, 0),
-      GLOBAL(1, 1),
+      DISABLED(0, 0),
+      TIMESTAMP(1, 1),
+      GLOBAL(2, 2),
       ;
       
-      public static final int TIMESTAMP_VALUE = 0;
-      public static final int GLOBAL_VALUE = 1;
+      public static final int DISABLED_VALUE = 0;
+      public static final int TIMESTAMP_VALUE = 1;
+      public static final int GLOBAL_VALUE = 2;
       
       
       public final int getNumber() { return value; }
       
       public static Type valueOf(int value) {
         switch (value) {
-          case 0: return TIMESTAMP;
-          case 1: return GLOBAL;
+          case 0: return DISABLED;
+          case 1: return TIMESTAMP;
+          case 2: return GLOBAL;
           default: return null;
         }
       }
@@ -10922,7 +10929,7 @@ public final class HBaseProtos {
       }
       
       private static final Type[] VALUES = {
-        TIMESTAMP, GLOBAL, 
+        DISABLED, TIMESTAMP, GLOBAL, 
       };
       
       public static Type valueOf(
@@ -11030,11 +11037,22 @@ public final class HBaseProtos {
       return type_;
     }
     
+    // optional int32 version = 5;
+    public static final int VERSION_FIELD_NUMBER = 5;
+    private int version_;
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    public int getVersion() {
+      return version_;
+    }
+    
     private void initFields() {
       name_ = "";
       table_ = "";
       creationTime_ = 0L;
       type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
+      version_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -11064,6 +11082,9 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeEnum(4, type_.getNumber());
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeInt32(5, version_);
+      }
       getUnknownFields().writeTo(output);
     }
     
@@ -11088,6 +11109,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(4, type_.getNumber());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(5, version_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -11132,6 +11157,11 @@ public final class HBaseProtos {
         result = result &&
             (getType() == other.getType());
       }
+      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion()) {
+        result = result && (getVersion()
+            == other.getVersion());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -11156,6 +11186,10 @@ public final class HBaseProtos {
       if (hasType()) {
         hash = (37 * hash) + TYPE_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getType());
+      }
+      if (hasVersion()) {
+        hash = (37 * hash) + VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getVersion();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       return hash;
@@ -11281,6 +11315,8 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
         bitField0_ = (bitField0_ & ~0x00000008);
+        version_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
       
@@ -11335,6 +11371,10 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000008;
         }
         result.type_ = type_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.version_ = version_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -11362,6 +11402,9 @@ public final class HBaseProtos {
         }
         if (other.hasType()) {
           setType(other.getType());
+        }
+        if (other.hasVersion()) {
+          setVersion(other.getVersion());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -11422,6 +11465,11 @@ public final class HBaseProtos {
                 bitField0_ |= 0x00000008;
                 type_ = value;
               }
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000010;
+              version_ = input.readInt32();
               break;
             }
           }
@@ -11543,6 +11591,27 @@ public final class HBaseProtos {
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000008);
         type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
+        onChanged();
+        return this;
+      }
+      
+      // optional int32 version = 5;
+      private int version_ ;
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      public int getVersion() {
+        return version_;
+      }
+      public Builder setVersion(int value) {
+        bitField0_ |= 0x00000010;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        version_ = 0;
         onChanged();
         return this;
       }
@@ -11694,18 +11763,19 @@ public final class HBaseProtos {
       " \002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005",
       "value\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002" +
       "(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005f" +
-      "irst\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\"\242\001\n\023SnapshotD" +
+      "irst\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\"\301\001\n\023SnapshotD" +
       "escription\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022" +
       "\027\n\014creationTime\030\003 \001(\003:\0010\0222\n\004type\030\004 \001(\0162\031" +
-      ".SnapshotDescription.Type:\tTIMESTAMP\"!\n\004" +
-      "Type\022\r\n\tTIMESTAMP\020\000\022\n\n\006GLOBAL\020\001*r\n\013Compa" +
-      "reType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005E" +
-      "QUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUA" +
-      "L\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013",
-      "\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELE" +
-      "TE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMU" +
-      "M\020\377\001B>\n*org.apache.hadoop.hbase.protobuf" +
-      ".generatedB\013HBaseProtosH\001\240\001\001"
+      ".SnapshotDescription.Type:\tTIMESTAMP\022\017\n\007" +
+      "version\030\005 \001(\005\"/\n\004Type\022\014\n\010DISABLED\020\000\022\r\n\tT" +
+      "IMESTAMP\020\001\022\n\n\006GLOBAL\020\002*r\n\013CompareType\022\010\n" +
+      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
+      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR",
+      "EATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013\n\007MINIMUM" +
+      "\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN" +
+      "\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B>\n*o" +
+      "rg.apache.hadoop.hbase.protobuf.generate" +
+      "dB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11845,7 +11915,7 @@ public final class HBaseProtos {
           internal_static_SnapshotDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SnapshotDescription_descriptor,
-              new java.lang.String[] { "Name", "Table", "CreationTime", "Type", },
+              new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", },
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.class,
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Builder.class);
           return null;
