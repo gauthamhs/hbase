@@ -54,6 +54,8 @@ import com.google.common.collect.Maps;
  * than later on in {@link #process()}.  The idea is to fail fast rather than
  * later down in an async invocation of {@link #process()} (which currently has
  * no means of reporting back issues once started).
+ *
+ * // TODO Throwing exceptions in constructors is a bad smell.  please don't do this.
  */
 @InterfaceAudience.Private
 public abstract class TableEventHandler extends EventHandler {
@@ -190,12 +192,16 @@ public abstract class TableEventHandler extends EventHandler {
   }
 
   /**
+   * Gets a TableDescriptor from the masterServices.  Can Throw exceptions.
+   *
+   * TODO rename this since getters should never throw exceptions.
+   *
    * @return Table descriptor for this table
    * @throws TableExistsException
    * @throws FileNotFoundException
    * @throws IOException
    */
-  protected HTableDescriptor getTableDescriptor()
+  public HTableDescriptor getTableDescriptor()
   throws FileNotFoundException, IOException {
     final String name = Bytes.toString(tableName);
     HTableDescriptor htd =
