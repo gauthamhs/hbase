@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.master.snapshot.MasterSnapshotVerifier;
 import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.procedure.ProcedureMember;
 import org.apache.hadoop.hbase.procedure.ProcedureMemberRpcs;
@@ -229,7 +230,9 @@ public class RegionServerSnapshotManager extends Configured implements Abortable
     ForeignExceptionDispatcher errorDispatcher = new ForeignExceptionDispatcher();
     switch (snapshot.getType()) {
     case LOGROLL:
-      throw new IllegalArgumentException("Unimplememted snapshot type:" + snapshot.getType());
+      return new LogRollSnapshotSubprocedure(member, errorDispatcher, wakeMillis,
+          timeoutMillis, involvedRegions, snapshot, rss.getConfiguration(),
+          taskManager, rss.getFileSystem());
     case FLUSH:
       return new FlushSnapshotSubprocedure(member, errorDispatcher, wakeMillis, 
           timeoutMillis, involvedRegions, snapshot, taskManager);
