@@ -15,23 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.server.errorhandling.impl;
+package org.apache.hadoop.hbase.errorhandling;
 
-import org.apache.hadoop.hbase.server.errorhandling.ExceptionListener;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Simple error listener that can be checked to see if it received an error ({@link #error}) and the
- * information about the error received ({@link #info}).
+ * If a {@link ForeignExceptionListener} is not provided with a root cause <tt>Exception</tt>,
+ * an Exception of this type will be thrown with this specified message.
  */
-@SuppressWarnings("javadoc")
-public class SimpleErrorListener<E extends Exception> implements ExceptionListener<E> {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+@SuppressWarnings("serial")
+public class UnknownForeignException extends ForeignException {
 
-  public boolean error = false;
-  public Object[] info = null;
-
-  @Override
-  public void receiveError(String message, Exception e, Object... info) {
-    this.error = true;
-    this.info = info;
+  public UnknownForeignException(String msg) {
+    super(msg);
   }
 }
