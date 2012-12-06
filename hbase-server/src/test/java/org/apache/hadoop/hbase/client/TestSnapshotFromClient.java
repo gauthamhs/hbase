@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -27,16 +29,24 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
@@ -194,6 +204,115 @@ public class TestSnapshotFromClient {
       fail("Snapshot succeeded even though there is not table.");
     } catch (SnapshotCreationException e) {
       LOG.info("Correctly failed to snapshot a non-existant table:" + e.getMessage());
+    }
+  }
+
+  @Test(timeout = 15000)
+  public void testAsyncSnapshot() throws Exception {
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("asyncSnapshot")
+        .setTable(STRING_TABLE_NAME).build();
+
+    // take the snapshot async
+    admin.takeSnapshotAsync(snapshot);
+
+    // constantly loop, looking for the snapshot to complete
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    SnapshotTestingUtils.waitForSnapshotToComplete(master, snapshot, 200);
+    LOG.info(" === Async Snapshot Completed ===");
+    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
+    // make sure we get the snapshot
+    SnapshotTestingUtils.assertOneSnapshotThatMatches(admin, snapshot);
+
+    // test that we can delete the snapshot
+    admin.deleteSnapshot(snapshot.getName());
+    LOG.info(" === Async Snapshot Deleted ===");
+    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
+    // make sure we don't have any snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+    LOG.info(" === Async Snapshot Test Completed ===");
+
+  }
+
+  /**
+   * Basic end-to-end test of timestamp based snapshots
+   * @throws Exception
+   */
+  @Test
+  public void testTimestampedCreateListDestroy() throws Exception {
+    LOG.debug("------- Starting Snapshot test -------------");
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    // make sure we don't fail on listing snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+    // load the table so we have some data
+    UTIL.loadTable(new HTable(UTIL.getConfiguration(), TABLE_NAME), TEST_FAM);
+    // and wait until everything stabilizes
+    HRegionServer rs = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    List<HRegion> onlineRegions = rs.getOnlineRegions(TABLE_NAME);
+    for (HRegion region : onlineRegions) {
+      region.waitForFlushesAndCompactions();
+    }
+    String snapshotName = "timestampSnapshotCreateListDestroy";
+    // test creating the snapshot
+    admin.snapshot(snapshotName, STRING_TABLE_NAME, SnapshotDescription.Type.TIMESTAMP);
+    logFSTree(new Path(UTIL.getConfiguration().get(HConstants.HBASE_DIR)));
+
+    // make sure we only have 1 matching snapshot
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
+      snapshotName, STRING_TABLE_NAME);
+
+    // check the directory structure
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshots.get(0), rootDir);
+    assertTrue(fs.exists(snapshotDir));
+    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
+    Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
+    assertTrue(fs.exists(snapshotinfo));
+
+    // check the table info
+    HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs, rootDir, TABLE_NAME);
+    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptor(fs,
+      SnapshotDescriptionUtils.getSnapshotsDir(rootDir), Bytes.toBytes(snapshotName));
+    assertEquals(desc, snapshotDesc);
+
+    // check the region snapshot for all the regions
+    List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
+    for (HRegionInfo info : regions) {
+      String regionName = info.getEncodedName();
+      Path regionDir = new Path(snapshotDir, regionName);
+      HRegionInfo snapshotRegionInfo = HRegion.loadDotRegionInfoFileContent(fs, regionDir);
+      assertEquals(info, snapshotRegionInfo);
+      // check to make sure we have the family
+      Path familyDir = new Path(regionDir, Bytes.toString(TEST_FAM));
+      assertTrue(fs.exists(familyDir));
+      // make sure we have some file references
+      assertTrue(fs.listStatus(familyDir).length > 0);
+    }
+
+    // test that we can delete the snapshot
+    admin.deleteSnapshot(snapshotName);
+    logFSTree(FSUtils.getRootDir(UTIL.getConfiguration()));
+
+    // make sure we don't have any snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+    LOG.debug("------- Snapshot Timestamp Create List Destroy-------------");
+
+  }
+
+  private void logFSTree(Path root) throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(root, "|-");
+  }
+
+  private void logFSTree(Path root, String prefix) throws IOException {
+    for (FileStatus file : UTIL.getDFSCluster().getFileSystem().listStatus(root)) {
+      if (file.isDir()) {
+        LOG.debug(prefix + file.getPath().getName() + "/");
+        logFSTree(file.getPath(), prefix + "---");
+      } else {
+        LOG.debug(prefix + file.getPath().getName());
+      }
     }
   }
 }

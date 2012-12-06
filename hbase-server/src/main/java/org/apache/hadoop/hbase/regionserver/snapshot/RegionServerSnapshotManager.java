@@ -239,7 +239,10 @@ public class RegionServerSnapshotManager extends Configured implements Abortable
     case GLOBAL:
       throw new IllegalArgumentException("Unimplememted snapshot type:" + snapshot.getType());
     case TIMESTAMP:
-      throw new IllegalArgumentException("Unimplememted snapshot type:" + snapshot.getType());
+      return new TimestampSnapshotSubprocedure(member, errorDispatcher, wakeMillis,
+          timeoutMillis, involvedRegions, snapshot,
+          RegionServerSnapshotManager.this.getConf(), taskManager,
+          rss.getFileSystem());
     default:
       throw new IllegalArgumentException("Unrecognized snapshot type:" + snapshot.getType());
     }
@@ -277,6 +280,7 @@ public class RegionServerSnapshotManager extends Configured implements Abortable
         // unwrap the snapshot information
         SnapshotDescription snapshot = SnapshotDescription.parseFrom(data);
         return RegionServerSnapshotManager.this.buildSubprocedure(snapshot);
+        
       } catch (InvalidProtocolBufferException e) {
         throw new IllegalArgumentException("Could not read snapshot information from request.");
       }
