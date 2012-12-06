@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -574,7 +575,6 @@ Server {
         ", cluster-up flag was=" + wasUp);
 
     // create the snapshot manager
-    // TODO should this be config based?
      this.snapshotManager = new SnapshotManager(this);
   }
 

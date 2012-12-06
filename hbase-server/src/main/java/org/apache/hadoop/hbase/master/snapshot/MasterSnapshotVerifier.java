@@ -52,6 +52,12 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
  * to verify that the files are exact copies (that would be paramount to taking the snapshot
  * again!), but instead just attempts to ensure that the files match the expected files and are the
  * same length.
+ * <p> 
+ * TODO Taking an online snapshots can race against other operations and this is an imperfect last
+ * line of defense.  For example, if meta changes between when snapshots are taken not all regions
+ * of a table may be present.  This can be caused by a region split (daughters present on this scan,
+ * but snapshot took parent), or move (snapshots only checks lists of region servers, a move could
+ * have caused a region to be skipped or done twice).
  * <p>
  * Current snapshot files checked:
  * <ol>
@@ -67,7 +73,7 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
  * </ul>
  * <li>HLogs for each server running the snapshot have been referenced
  * <ul>
- * <li>Only checked for {@link Type#GLOBAL} snapshots</li>
+ * <li>Only checked for {@link Type#GLOBAL} or {@link Type#LOGROLL} snapshots</li>
  * </ul>
  * </li>
  */
@@ -151,7 +157,7 @@ public final class MasterSnapshotVerifier {
   }
 
   /**
-   * Check that all the regions in the the snapshot are valid
+   * Check that all the regions in the the snapshot are valid, and accounted for.
    * @param snapshotDir snapshot directory to check
    * @throws IOException if we can't reach .META. or read the files from the FS
    */
@@ -177,6 +183,7 @@ public final class MasterSnapshotVerifier {
     // make sure we have region in the snapshot
     Path regionDir = new Path(snapshotDir, region.getEncodedName());
     if (!fs.exists(regionDir)) {
+      // could happen due to a move or split race.
       throw new CorruptedSnapshotException("No region directory found for region:" + region,
           snapshot);
     }

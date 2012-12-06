@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,8 +46,13 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.snapshot.CloneSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
+import org.apache.hadoop.hbase.master.snapshot.EnabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.RestoreSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.TakeSnapshotHandler;
+import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
+import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
+import org.apache.hadoop.hbase.procedure.ProcedureFactory;
+import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -60,6 +66,7 @@ import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * This class manages the procedure of taking and restoring snapshots. There is only one
@@ -91,7 +98,7 @@ public class SnapshotManager implements Stoppable {
    * Conf key for # of ms elapsed before injecting a snapshot timeout error when waiting for
    * completion.
    */
-  public static final String SNAPSHOT_TIMEMOUT_MILLIS_KEY = "hbase.snapshot.master.timeoutMillis";
+  public static final String SNAPSHOT_TIMEOUT_MILLIS_KEY = "hbase.snapshot.master.timeoutMillis";
 
   /** Name of the operation to use in the controller */
   public static final String ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION = "online-snapshot";
@@ -105,6 +112,10 @@ public class SnapshotManager implements Stoppable {
   private final long wakeFrequency;
   private final MasterServices master;  // Needed by TableEventHandlers
 
+  // TODO this relationship is backwards -- shouldn't this take a coordinator that is more
+  // "global" the SnapshotManager
+  private final ProcedureCoordinator coordinator;
+
   // A reference to a handler.  If the handler is non-null, then it is assumed that a snapshot is
   // in progress currently
   // TODO: this is a bad smell;  likely replace with a collection in the future.  Also this gets
@@ -117,19 +128,40 @@ public class SnapshotManager implements Stoppable {
   // Restore Sentinels map, with table name as key
   private Map<String, SnapshotSentinel> restoreHandlers = new HashMap<String, SnapshotSentinel>();
 
-  /**
-   * Construct a snapshot manager.
-   * @param master
-   * @param comms
-   */
-  public SnapshotManager(final MasterServices master) {
+  public SnapshotManager(final MasterServices master) throws KeeperException {
     this.master = master;
 
     // get the configuration for the coordinator
     Configuration conf = master.getConfiguration();
     this.wakeFrequency = conf.getInt(SNAPSHOT_WAKE_MILLIS_KEY, SNAPSHOT_WAKE_MILLIS_DEFAULT);
+    long keepAliveTime = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+
+    // setup the default procedure coordinator
+    String name = master.getServerName().toString();
+    ThreadPoolExecutor tpool = ProcedureCoordinator.defaultPool(name, keepAliveTime, opThreads, wakeFrequency);
+    long timeout = SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME;
+    ProcedureFactory coordinatorBuilder = new ProcedureFactory(wakeFrequency, timeout, null);
+    ProcedureCoordinatorRpcs comms = new ZKProcedureCoordinatorRpcs(
+        master.getZooKeeper(), SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION, name);
+
+    this.coordinator = new ProcedureCoordinator(comms, coordinatorBuilder, tpool);
     this.rootDir = master.getMasterFileSystem().getRootDir();
     this.executorService = master.getExecutorService();
+  }
+  
+  /**
+   * Fully specify all necessary components of a snapshot manager. Exposed for testing.
+   * @param master services for the master where the manager is running
+   * @param coordinator coordinator to coordinate online, distributed three phase commit based
+   *          snapshots
+   */
+  public SnapshotManager(final MasterServices master, ProcedureCoordinator coordinator, ExecutorService pool) {
+    this.master = master;
+    this.wakeFrequency = master.getConfiguration().getInt(SNAPSHOT_WAKE_MILLIS_KEY,
+      SNAPSHOT_WAKE_MILLIS_DEFAULT);
+    this.coordinator = coordinator;
+    this.rootDir = master.getMasterFileSystem().getRootDir();
+    this.executorService = pool;
   }
 
   /**
@@ -324,6 +356,40 @@ public class SnapshotManager implements Stoppable {
   }
 
   /**
+   * Take a snapshot of a enabled table.
+   * <p>
+   * Ensures the snapshot won't be started if there is another snapshot already running. Does
+   * <b>not</b> check to see if another snapshot of the same name already exists.
+   * @param snapshot description of the snapshot to take. Modified to be {@link Type#DISABLED}.
+   * @throws HBaseSnapshotException if the snapshot could not be started
+   */
+  private synchronized void snapshotEnabledTable(SnapshotDescription snapshot)
+      throws HBaseSnapshotException {
+ 
+    // TODO check the type of the snapshot
+    
+    TakeSnapshotHandler handler;
+    try {
+      handler = new EnabledTableSnapshotHandler(snapshot, master, this, wakeFrequency);
+      this.handler = handler;
+      this.executorService.submit(handler);
+    } catch (IOException e) {
+      // cleanup the working directory by trying to delete it from the fs.
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+      try {
+        if (this.master.getMasterFileSystem().getFileSystem().delete(workingDir, true)) {
+          LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:"
+              + snapshot);
+        }
+      } catch (IOException e1) {
+        LOG.error("Couldn't delete working directory (" + workingDir + " for snapshot:" + snapshot);
+      }
+      // fail the snapshot
+      throw new SnapshotCreationException("Could not build snapshot handler", e, snapshot);
+    }
+  }
+
+  /**
    * Take a snapshot based on the enabled/disabled state of the table.
    *
    * @param snapshot
@@ -367,7 +433,8 @@ public class SnapshotManager implements Stoppable {
     AssignmentManager assignmentMgr = master.getAssignmentManager();
     if (assignmentMgr.getZKTable().isEnabledTable(snapshot.getTable())) {
       LOG.debug("Table enabled, starting distributed snapshot.");
-      throw new UnsupportedOperationException("Snapshots of enabled tables is not yet supported");
+      snapshotEnabledTable(snapshot);
+      LOG.debug("Started snapshot: " + snapshot);
     }
     // For disabled table, snapshot is created by the master
     else if (assignmentMgr.getZKTable().isDisabledTable(snapshot.getTable())) {
@@ -428,6 +495,14 @@ public class SnapshotManager implements Stoppable {
    */
   public synchronized void setSnapshotHandlerForTesting(TakeSnapshotHandler handler) {
     this.handler = handler;
+  }
+
+  /**
+   * TODO make this package visible after package consolidation.
+   * @return distributed commit coordinator for all running snapshots
+   */
+  public ProcedureCoordinator getCoordinator() {
+    return coordinator;
   }
 
   /**

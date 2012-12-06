@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.server.snapshot.task.TableInfoCopyTask;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -124,6 +125,16 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       // write down the snapshot info in the working directory
       SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, this.fs);
 
+      Path rootDir = null;
+      try {
+        rootDir = FSUtils.getRootDir(this.conf);
+      } catch (IOException e) {
+        throw new ForeignException(e);
+      }
+      ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher();
+      new TableInfoCopyTask(monitor, snapshot, fs, rootDir).call();
+      monitor.rethrowException();
+      
       // run the snapshot
       snapshotRegions(regionsAndLocations);
 
@@ -140,6 +151,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
     } catch (Exception e) {
       String reason = "Failed due to exception:" + e.getMessage();
+      LOG.error("Got exception taking snapshot", e);
       ForeignException ee = new ForeignException(reason, e);
       getMonitor().receiveError(reason, ee, snapshot);
       // need to mark this completed to close off and allow cleanup to happen.
