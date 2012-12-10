@@ -62,7 +62,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import com.google.protobuf.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -102,11 +101,12 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionCheckable;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
-import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -117,6 +117,8 @@ import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -124,6 +126,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -145,7 +148,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MutableClassToInstanceMap;
 import com.google.common.io.Closeables;
 
-import static org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -2521,6 +2528,57 @@ public class HRegion implements HeapSize { // , Writable{
       throw new FailedSanityCheckException(batchMutate[0].getExceptionMsg());
     } else if (batchMutate[0].getOperationStatusCode().equals(OperationStatusCode.BAD_FAMILY)) {
       throw new NoSuchColumnFamilyException(batchMutate[0].getExceptionMsg());
+    }
+  }
+
+  /**
+   * Complete taking the snapshot on the region. Writes the region info and adds references to the
+   * working snapshot directory.
+   * @param desc snapshot being completed
+   * @param failureMonitor to monitor for external failures
+   * @throws IOException if there is an external or internal error causing the snapshot to fail
+   *
+   * TODO remove ExceptionCheckable from this method, it pollutes the namespace
+   */
+  public void addRegionToSnapshot(SnapshotDescription desc,
+      ForeignExceptionCheckable failureMonitor) throws IOException {
+    // This should be "fast" since we don't rewrite store files but instead
+    // back up the store files by creating a reference
+    Path rootDir = FSUtils.getRootDir(this.rsServices.getConfiguration());
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(desc, rootDir,
+      regionInfo.getEncodedName());
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    checkRegioninfoOnFilesystem(snapshotRegionDir);
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    for (Store store : stores.values()) {
+      // build the snapshot reference directory for the store
+      Path dstStoreDir = TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir,
+        Bytes.toString(store.getFamily().getName()));
+      List<StoreFile> storeFiles = store.getStorefiles();
+      if (LOG.isDebugEnabled()) LOG.debug("Adding snapshot references for " + storeFiles
+          + " hfiles");
+      // TODO consider moving this over to a single file with all the names of the store files
+      for (int i = 0; i < storeFiles.size(); i++) {
+        failureMonitor.rethrowException(); // TODO I do not like this in here
+        Path file = storeFiles.get(i).getPath();
+        // 2.3. create "reference" to this store file
+        LOG.debug("(" + i + ") Creating reference for file:" + file);
+        Path referenceFile = new Path(dstStoreDir, file.getName());
+        boolean success = fs.createNewFile(referenceFile);
+        if (!success) {
+          throw new IOException("Failed to create reference file:" + referenceFile);
+        }
+      }
     }
   }
 

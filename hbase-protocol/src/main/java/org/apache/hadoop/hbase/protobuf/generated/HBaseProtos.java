@@ -10844,7 +10844,7 @@ public final class HBaseProtos {
     boolean hasCreationTime();
     long getCreationTime();
     
-    // optional .SnapshotDescription.Type type = 4 [default = TIMESTAMP];
+    // optional .SnapshotDescription.Type type = 4 [default = FLUSH];
     boolean hasType();
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type getType();
     
@@ -10885,11 +10885,15 @@ public final class HBaseProtos {
       DISABLED(0, 0),
       TIMESTAMP(1, 1),
       GLOBAL(2, 2),
+      FLUSH(3, 3),
+      LOGROLL(4, 4),
       ;
       
       public static final int DISABLED_VALUE = 0;
       public static final int TIMESTAMP_VALUE = 1;
       public static final int GLOBAL_VALUE = 2;
+      public static final int FLUSH_VALUE = 3;
+      public static final int LOGROLL_VALUE = 4;
       
       
       public final int getNumber() { return value; }
@@ -10899,6 +10903,8 @@ public final class HBaseProtos {
           case 0: return DISABLED;
           case 1: return TIMESTAMP;
           case 2: return GLOBAL;
+          case 3: return FLUSH;
+          case 4: return LOGROLL;
           default: return null;
         }
       }
@@ -10929,7 +10935,7 @@ public final class HBaseProtos {
       }
       
       private static final Type[] VALUES = {
-        DISABLED, TIMESTAMP, GLOBAL, 
+        DISABLED, TIMESTAMP, GLOBAL, FLUSH, LOGROLL, 
       };
       
       public static Type valueOf(
@@ -11027,7 +11033,7 @@ public final class HBaseProtos {
       return creationTime_;
     }
     
-    // optional .SnapshotDescription.Type type = 4 [default = TIMESTAMP];
+    // optional .SnapshotDescription.Type type = 4 [default = FLUSH];
     public static final int TYPE_FIELD_NUMBER = 4;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type type_;
     public boolean hasType() {
@@ -11051,7 +11057,7 @@ public final class HBaseProtos {
       name_ = "";
       table_ = "";
       creationTime_ = 0L;
-      type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
+      type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.FLUSH;
       version_ = 0;
     }
     private byte memoizedIsInitialized = -1;
@@ -11313,7 +11319,7 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         creationTime_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000004);
-        type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
+        type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.FLUSH;
         bitField0_ = (bitField0_ & ~0x00000008);
         version_ = 0;
         bitField0_ = (bitField0_ & ~0x00000010);
@@ -11571,8 +11577,8 @@ public final class HBaseProtos {
         return this;
       }
       
-      // optional .SnapshotDescription.Type type = 4 [default = TIMESTAMP];
-      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
+      // optional .SnapshotDescription.Type type = 4 [default = FLUSH];
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.FLUSH;
       public boolean hasType() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
@@ -11590,7 +11596,7 @@ public final class HBaseProtos {
       }
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000008);
-        type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.TIMESTAMP;
+        type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.FLUSH;
         onChanged();
         return this;
       }
@@ -11763,19 +11769,19 @@ public final class HBaseProtos {
       " \002(\t\"-\n\016NameStringPair\022\014\n\004name\030\001 \002(\t\022\r\n\005",
       "value\030\002 \002(\t\",\n\rNameBytesPair\022\014\n\004name\030\001 \002" +
       "(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005f" +
-      "irst\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\"\301\001\n\023SnapshotD" +
+      "irst\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\"\325\001\n\023SnapshotD" +
       "escription\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022" +
-      "\027\n\014creationTime\030\003 \001(\003:\0010\0222\n\004type\030\004 \001(\0162\031" +
-      ".SnapshotDescription.Type:\tTIMESTAMP\022\017\n\007" +
-      "version\030\005 \001(\005\"/\n\004Type\022\014\n\010DISABLED\020\000\022\r\n\tT" +
-      "IMESTAMP\020\001\022\n\n\006GLOBAL\020\002*r\n\013CompareType\022\010\n" +
-      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
-      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR",
-      "EATER\020\005\022\t\n\005NO_OP\020\006*_\n\007KeyType\022\013\n\007MINIMUM" +
-      "\020\000\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\010\022\021\n\rDELETE_COLUMN" +
-      "\020\014\022\021\n\rDELETE_FAMILY\020\016\022\014\n\007MAXIMUM\020\377\001B>\n*o" +
-      "rg.apache.hadoop.hbase.protobuf.generate" +
-      "dB\013HBaseProtosH\001\240\001\001"
+      "\027\n\014creationTime\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031" +
+      ".SnapshotDescription.Type:\005FLUSH\022\017\n\007vers" +
+      "ion\030\005 \001(\005\"G\n\004Type\022\014\n\010DISABLED\020\000\022\r\n\tTIMES" +
+      "TAMP\020\001\022\n\n\006GLOBAL\020\002\022\t\n\005FLUSH\020\003\022\013\n\007LOGROLL" +
+      "\020\004*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS_OR_E" +
+      "QUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n\020GREA",
+      "TER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_OP\020\006*_" +
+      "\n\007KeyType\022\013\n\007MINIMUM\020\000\022\007\n\003PUT\020\004\022\n\n\006DELET" +
+      "E\020\010\022\021\n\rDELETE_COLUMN\020\014\022\021\n\rDELETE_FAMILY\020" +
+      "\016\022\014\n\007MAXIMUM\020\377\001B>\n*org.apache.hadoop.hba" +
+      "se.protobuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

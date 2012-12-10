@@ -228,6 +228,11 @@ public class RegionServerSnapshotManager extends Configured implements Abortable
     LOG.debug("Attempting to build new snapshot for: " + snapshot);
     ForeignExceptionDispatcher errorDispatcher = new ForeignExceptionDispatcher();
     switch (snapshot.getType()) {
+    case LOGROLL:
+      throw new IllegalArgumentException("Unimplememted snapshot type:" + snapshot.getType());
+    case FLUSH:
+      return new FlushSnapshotSubprocedure(member, errorDispatcher, wakeMillis, 
+          timeoutMillis, involvedRegions, snapshot, taskManager);
     case GLOBAL:
       throw new IllegalArgumentException("Unimplememted snapshot type:" + snapshot.getType());
     case TIMESTAMP:
