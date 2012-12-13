@@ -207,6 +207,8 @@ public class StoreFile {
    */
   private static final Pattern REF_NAME_PARSER =
     Pattern.compile("^([0-9a-f]+(?:_SeqId_[0-9]+_)?)(?:\\.(.+))?$");
+  private static final Pattern REF_TO_LINK_PARSER =
+      Pattern.compile("^([0-9a-f]+-[0-9a-f]+-[^.]+).(.+)$");
 
   // StoreFile.Reader
   private volatile Reader reader;
@@ -257,7 +259,6 @@ public class StoreFile {
     } else if (isReference(p)) {
       this.reference = Reference.read(fs, p);
       this.referencePath = getReferredToFile(this.path);
-      LOG.debug("Store file " + p + " is a reference");
     }
 
     if (BloomFilterFactory.isGeneralBloomEnabled(conf)) {
@@ -329,6 +330,8 @@ public class StoreFile {
     }
     return m.groupCount() > 1 && m.group(2) != null;
   }
+  
+  
 
   /*
    * Return path to the file referred to by a Reference.  Presumes a directory
@@ -355,6 +358,33 @@ public class StoreFile {
       p.getParent().getName()), nameStrippedOfSuffix);
   }
 
+  /*
+   * TODO
+   * Return path to the file referred to by a Reference.  Presumes a directory
+   * hierarchy of <code>${hbase.rootdir}/tablename/regionname/familyname</code>.
+   * @param p Path to a Reference file.
+   * @return Calculated path to parent region file.
+   * @throws IOException
+   */
+  static Path getReferredToLink(final Path p) {
+    Matcher m = REF_TO_LINK_PARSER.matcher(p.getName());
+    if (m == null || !m.matches()) {
+      LOG.warn("Failed match of store file name " + p.toString());
+      throw new RuntimeException("Failed match of store file name " +
+          p.toString());
+    }
+    // Other region name is suffix on the passed Reference file name
+    String otherRegion = m.group(2);
+    // Tabledir is up two directories from where Reference was written.
+    Path tableDir = p.getParent().getParent().getParent();
+    String nameStrippedOfSuffix = m.group(1);
+    // Build up new path with the referenced region in place of our current
+    // region in the reference path.  Also strip regionname suffix from name.
+    return new Path(new Path(new Path(tableDir, otherRegion),
+      p.getParent().getName()), nameStrippedOfSuffix);
+  }
+
+  
   /**
    * @return True if this file was made by a major compaction.
    */
@@ -535,9 +565,34 @@ public class StoreFile {
           this.cacheConf, this.reference,
           dataBlockEncoder.getEncodingInCache());
     } else if (isLink()) {
-      long size = link.getFileStatus(fs).getLen();
-      this.reader = new Reader(this.fs, this.path, link, size, this.cacheConf,
-                               dataBlockEncoder.getEncodingInCache(), true);
+      try { 
+        long size = link.getFileStatus(fs).getLen();
+        this.reader = new Reader(this.fs, this.path, link, size, this.cacheConf,
+            dataBlockEncoder.getEncodingInCache(), true);
+      } catch (FileNotFoundException fnfe) {
+        // This didn't actually link to another file!
+
+        // There is a case where a file with the hfilelink pattern is actually a daughter
+        // reference to a hfile link.  this hack handles this case.
+        FileStatus actuallyRef = fs.getFileStatus(path);
+        long actualLen = actuallyRef.getLen();
+        if (actualLen == 0) {
+          LOG.error(path + " is a 0-len file, and actually a hfilelink missing target file!", fnfe);
+          throw fnfe;
+        }
+        LOG.debug("HACK: size of link file is " + actualLen + "!=0; trying reference to an" +
+            " HFileLink " + path + "!");
+        this.reference = Reference.read(fs, this.path);
+        LOG.debug("HACK: "+ path + " was a reference file!");
+        this.referencePath = getReferredToLink(this.path);
+        LOG.debug("HACK: reference file "+ path + " referred to " + referencePath + "!");
+        LOG.debug("Store file " + path + " is a reference to a hfilelink");
+        link = new HFileLink(fs.getConf(), referencePath);
+        this.reader = new HalfStoreFileReader(this.fs, this.referencePath, link,
+            this.cacheConf, this.reference,
+            dataBlockEncoder.getEncodingInCache());
+        LOG.debug("HACK: Store file " + path + " is a reference to an HFileLink!");
+      }
     } else {
       this.reader = new Reader(this.fs, this.path, this.cacheConf,
           dataBlockEncoder.getEncodingInCache());

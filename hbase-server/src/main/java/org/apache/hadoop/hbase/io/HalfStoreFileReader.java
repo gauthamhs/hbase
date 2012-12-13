@@ -79,6 +79,20 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     this.top = Reference.isTopFileRegion(r.getFileRegion());
   }
 
+  public HalfStoreFileReader(final FileSystem fs, final Path p, HFileLink link,
+      final CacheConfig cacheConf, final Reference r,
+      DataBlockEncoding preferredEncodingInCache) throws IOException {
+    super(fs, p, link, link.getFileStatus(fs).getLen(), cacheConf, preferredEncodingInCache, true);
+    // This is not actual midkey for this half-file; its just border
+    // around which we split top and bottom.  Have to look in files to find
+    // actual last and first keys for bottom and top halves.  Half-files don't
+    // have an actual midkey themselves. No midkey is how we indicate file is
+    // not splittable.
+    this.splitkey = r.getSplitKey();
+    // Is it top or bottom half?
+    this.top = Reference.isTopFileRegion(r.getFileRegion());
+  }
+
   protected boolean isTop() {
     return this.top;
   }

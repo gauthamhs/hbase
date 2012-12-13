@@ -31,6 +31,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
@@ -40,6 +41,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.HalfStoreFileReader;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -105,6 +108,9 @@ public class TestStoreFile extends HBaseTestCase {
   private void writeStoreFile(final StoreFile.Writer writer) throws IOException {
     writeStoreFile(writer, Bytes.toBytes(getName()), Bytes.toBytes(getName()));
   }
+  
+  // pick an split point (roughly halfway) 
+  byte[] SPLITKEY = new byte[] { (LAST_CHAR-FIRST_CHAR)/2, FIRST_CHAR};
   /*
    * Writes HStoreKey and ImmutableBytes data to passed writer and
    * then closes it.
@@ -201,6 +207,102 @@ public class TestStoreFile extends HBaseTestCase {
     while (s.next()) {
       count++;
     }
+    assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
+  }
+
+
+  /**
+   * store dir = <root>/<tablename>/<enc>/<cf>
+   * storefile = <root>/<tablename>/<enc>/<cf>/<file>
+   * dstPath   = <root>/test-region/<cf>
+   * linkFile  = <root>/test-region/<cf>/<hfile>-<region>-<table>
+   * splitDirA = <root>/<tablename>/splitA/<cf>
+   * splitDirB = <root>/<tablename>/splitB/<cf>
+   */
+  public void testReferenceToHFileLink() throws IOException {
+    final String columnFamily = "f";
+    HRegionInfo hri = new HRegionInfo(Bytes.toBytes("original"));
+    Path storedir = new Path(new Path(FSUtils.getRootDir(conf),
+      new Path(hri.getTableNameAsString(), hri.getEncodedName())), columnFamily);
+
+    // Make a store file and write data to it.
+    StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf,
+         this.fs, 8 * 1024)
+            .withOutputDir(storedir)
+            .build();
+    Path storeFilePath = writer.getPath();
+    writeStoreFile(writer);
+    writer.close();
+
+    // create link to store file
+    String target = "clone";
+    Path dstPath = new Path(FSUtils.getRootDir(conf), new Path(new Path(target, "region"), columnFamily));
+    HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
+    Path linkFilePath = new Path(dstPath,
+                  HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
+
+    
+    // create splits of the link.
+    Path splitDirA = new Path(new Path(FSUtils.getRootDir(conf),
+        new Path(target, "splitA")), columnFamily);
+    Path splitDirB = new Path(new Path(FSUtils.getRootDir(conf),
+        new Path(target, "splitB")), columnFamily);
+
+    StoreFile f = new StoreFile(fs, linkFilePath, conf, cacheConf, BloomType.NONE,
+        NoOpDataBlockEncoder.INSTANCE); 
+    byte[] splitRow = SPLITKEY;
+    Path pathA = StoreFile.split(fs, splitDirA, f, splitRow, true); // top 
+    Path pathB = StoreFile.split(fs, splitDirB, f, splitRow, false); // bottom
+
+    // OK test the thing
+    FSUtils.logFileSystemState(fs, FSUtils.getRootDir(conf), LOG);
+
+    // There is a case where a file with the hfilelink pattern is actually a daughter
+    // reference to a hfile link.  this hack handles this case.
+    FileStatus actuallyRef = fs.getFileStatus(pathA);
+    long actualLen = actuallyRef.getLen();
+    if (actualLen == 0) {
+      LOG.error(pathA + " is a 0-len file, and actually a hfilelink missing target file!");
+      fail("FAIL because we want it to deref");
+    }
+    LOG.debug("HACK: size of link file is " + actualLen + "!=0; trying reference to an" +
+        " HFileLink " + pathA + "!");
+    Reference reference = Reference.read(fs, pathA);
+    LOG.debug("HACK: "+ pathA + " was a reference file!");
+    Path referencePath = StoreFile.getReferredToLink(pathA);
+    HFileLink link = new HFileLink(conf, referencePath);
+    LOG.debug("HACK: reference file "+ pathA + " referred to " + referencePath + "!");
+    LOG.debug("Store file " + pathA + " is a reference to a hfilelink");
+    StoreFile.Reader reader = new HalfStoreFileReader(fs, referencePath, link, 
+        cacheConf, reference, DataBlockEncoding.NONE);
+    LOG.debug("HACK: Store file " + pathA + " is a reference to an HFileLink!");
+    
+    
+    // Try to open store file from link
+    StoreFile hsfA = new StoreFile(this.fs, pathA,  conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
+    // Now confirm that I can read from the ref to link
+    int count = 1;
+    HFileScanner s = hsfA.createReader().getScanner(false, false);
+    s.seekTo();
+    while (s.next()) {
+      count++;
+    }
+    assertTrue(count > 0); // read some rows here  
+
+    // Try to open store file from link
+    StoreFile hsfB = new StoreFile(this.fs, pathB,  conf, cacheConf,
+        StoreFile.BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
+
+    // Now confirm that I can read from the ref to link
+    HFileScanner sB = hsfB.createReader().getScanner(false, false);
+    sB.seekTo();
+    while (sB.next()) {
+      count++;
+    }
+
+    // read the rest here.
     assertEquals((LAST_CHAR - FIRST_CHAR + 1) * (LAST_CHAR - FIRST_CHAR + 1), count);
   }
 
