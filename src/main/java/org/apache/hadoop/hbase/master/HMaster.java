@@ -2144,4 +2144,15 @@ Server {
     // check to see if the snapshot already exists
     return fs.exists(snapshotDir);
   }
+
+  @Override
+  public void restoreSnapshot(final SnapshotDescription request) throws IOException {
+    throw new UnsupportedOperationException("Snapshots restore is not implemented yet.");
+  }
+
+  @Override
+  public boolean isRestoreSnapshotDone(final SnapshotDescription request) throws IOException {
+    throw new UnsupportedOperationException("Snapshots restore is not implemented yet.");
+  }
 }
+

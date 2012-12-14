@@ -300,4 +300,10 @@ public interface HMasterInterface extends VersionedProtocol {
 
   public boolean isSnapshotDone(final SnapshotDescription snapshot)
     throws IOException;
+
+  public void restoreSnapshot(final SnapshotDescription request)
+    throws IOException;
+
+  public boolean isRestoreSnapshotDone(final SnapshotDescription request)
+    throws IOException;
 }
