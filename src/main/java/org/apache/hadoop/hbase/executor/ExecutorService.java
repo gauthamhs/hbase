@@ -137,6 +137,7 @@ public class ExecutorService {
       case C_M_MODIFY_TABLE:
       case C_M_CREATE_TABLE:
       case C_M_SNAPSHOT_TABLE:
+      case C_M_RESTORE_SNAPSHOT:
         return ExecutorType.MASTER_TABLE_OPERATIONS;
 
       // RegionServer executor services
