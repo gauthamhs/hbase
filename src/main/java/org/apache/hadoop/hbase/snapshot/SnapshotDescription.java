@@ -62,6 +62,10 @@ public class SnapshotDescription implements Writable {
   public int getVersion() {
     return this.proto.getVersion();
   }
+
+  public String toString() {
+    return this.proto.toString();
+  }
   
   // Writable
   /**

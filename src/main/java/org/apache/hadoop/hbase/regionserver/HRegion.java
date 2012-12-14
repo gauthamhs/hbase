@@ -736,9 +736,32 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   private void checkRegioninfoOnFilesystem() throws IOException {
-    Path regioninfoPath = new Path(this.regiondir, REGIONINFO_FILE);
-    if (this.fs.exists(regioninfoPath) &&
-        this.fs.getFileStatus(regioninfoPath).getLen() > 0) {
+    checkRegioninfoOnFilesystem(this.regiondir);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions.
+   * @param regiondir directory under which to write out the region info
+   * @throws IOException
+   */
+  private void checkRegioninfoOnFilesystem(Path regiondir) throws IOException {
+    writeRegioninfoOnFilesystem(regionInfo, regiondir, getFilesystem(), conf);
+  }
+
+  /**
+   * Write out an info file under the region directory. Useful recovering mangled regions. If the
+   * regioninfo already exists on disk and there is information in the file, then we fast exit.
+   * @param regionInfo information about the region
+   * @param regiondir directory under which to write out the region info
+   * @param fs {@link FileSystem} on which to write the region info
+   * @param conf {@link Configuration} from which to extract specific file locations
+   * @throws IOException on unexpected error.
+   */
+  public static void writeRegioninfoOnFilesystem(HRegionInfo regionInfo, Path regiondir,
+      FileSystem fs, Configuration conf) throws IOException {
+    Path regioninfoPath = new Path(regiondir, REGIONINFO_FILE);
+    if (fs.exists(regioninfoPath) &&
+        fs.getFileStatus(regioninfoPath).getLen() > 0) {
       return;
     }
     // Create in tmpdir and then move into place in case we crash after
@@ -751,7 +774,7 @@ public class HRegion implements HeapSize { // , Writable{
         HConstants.DATA_FILE_UMASK_KEY);
 
     // and then create the file
-    Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
+    Path tmpPath = new Path(getTmpDir(regiondir), REGIONINFO_FILE);
 
     // if datanode crashes or if the RS goes down just before the close is called while trying to
     // close the created regioninfo file in the .tmp directory then on next
@@ -764,10 +787,10 @@ public class HRegion implements HeapSize { // , Writable{
     FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
 
     try {
-      this.regionInfo.write(out);
+      regionInfo.write(out);
       out.write('\n');
       out.write('\n');
-      out.write(Bytes.toBytes(this.regionInfo.toString()));
+      out.write(Bytes.toBytes(regionInfo.toString()));
     } finally {
       out.close();
     }
@@ -1180,7 +1203,11 @@ public class HRegion implements HeapSize { // , Writable{
    * will have its contents removed when the region is reopened.
    */
   Path getTmpDir() {
-    return new Path(getRegionDir(), REGION_TEMP_SUBDIR);
+    return getTmpDir(getRegionDir());
+  }
+
+  static Path getTmpDir(Path regionDir) {
+    return new Path(regionDir, REGION_TEMP_SUBDIR);
   }
 
   void triggerMajorCompaction() {

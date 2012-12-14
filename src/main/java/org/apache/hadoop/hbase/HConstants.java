@@ -660,14 +660,21 @@ public final class HConstants {
    * The actual value is irrelevant because this is always compared by reference.
    */
   public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
-  
+
   /** Directory under /hbase where archived hfiles are stored */
   public static final String HFILE_ARCHIVE_DIRECTORY = ".archive";
+
+  /**
+   * Name of the directory to store snapshots all snapshots. See SnapshotDescriptionUtils for
+   * remaining snapshot constants; this is here to keep HConstants dependencies at a minimum and
+   * uni-directional.
+   */
+  public static final String SNAPSHOT_DIR_NAME = ".snapshot";
 
   public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(
       Arrays.asList(new String[] { HREGION_LOGDIR_NAME, HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME,
           Bytes.toString(META_TABLE_NAME), Bytes.toString(ROOT_TABLE_NAME), SPLIT_LOGDIR_NAME,
-          HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY }));
+          HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME }));
 
   private HConstants() {
     // Can't be instantiated with this ctor.
