@@ -59,10 +59,12 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   private boolean firstKeySeeked = false;
 
   /**
+   * Creates a half file reader for a normal hfile.
    * @param fs
    * @param p
    * @param cacheConf
    * @param r
+   * @param preferredEncodingInCache
    * @throws IOException
    */
   public HalfStoreFileReader(final FileSystem fs, final Path p,
@@ -79,6 +81,16 @@ public class HalfStoreFileReader extends StoreFile.Reader {
     this.top = Reference.isTopFileRegion(r.getFileRegion());
   }
 
+  /**
+   * Creates a half file reader for a hfile referred to by an hfilelink.
+   * @param fs
+   * @param p
+   * @param link
+   * @param cacheConf
+   * @param r
+   * @param preferredEncodingInCache
+   * @throws IOException
+   */
   public HalfStoreFileReader(final FileSystem fs, final Path p, HFileLink link,
       final CacheConfig cacheConf, final Reference r,
       DataBlockEncoding preferredEncodingInCache) throws IOException {
