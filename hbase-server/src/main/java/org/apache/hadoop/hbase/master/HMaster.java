@@ -576,6 +576,7 @@ Server {
 
     // create the snapshot manager
      this.snapshotManager = new SnapshotManager(this);
+    this.snapshotManager.start();
   }
 
   /**
