@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -44,10 +45,14 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.master.snapshot.CloneSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.EnabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.RestoreSnapshotHandler;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner;
 import org.apache.hadoop.hbase.master.snapshot.TakeSnapshotHandler;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
@@ -66,6 +71,7 @@ import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -128,6 +134,9 @@ public class SnapshotManager implements Stoppable {
   // Restore Sentinels map, with table name as key
   private Map<String, SnapshotSentinel> restoreHandlers = new HashMap<String, SnapshotSentinel>();
 
+  // Is snapshot feature enabled?
+  private boolean isSnapshotSupported = false;
+
   public SnapshotManager(final MasterServices master) throws KeeperException {
     this.master = master;
 
@@ -174,6 +183,8 @@ public class SnapshotManager implements Stoppable {
    * @throws IOException if we can't reach the filesystem
    */
   public void start() throws IOException {
+    checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
+
     // cleanup any existing snapshots.
     Path tmpdir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir);
     if (master.getMasterFileSystem().getFileSystem().delete(tmpdir, true)) {
@@ -414,6 +425,8 @@ public class SnapshotManager implements Stoppable {
    * @throws IOException when some sort of generic IO exception occurs.
    */
   public void takeSnapshot(SnapshotDescription snapshot) throws HBaseSnapshotException, IOException {
+    checkSnapshotSupport();
+
     // check to see if we already completed the snapshot
     if (isSnapshotCompleted(snapshot)) {
       throw new SnapshotExistsException("Snapshot '" + snapshot.getName()
@@ -582,6 +595,8 @@ public class SnapshotManager implements Stoppable {
    * @throws IOException
    */
   public void restoreSnapshot(SnapshotDescription reqSnapshot) throws IOException {
+    checkSnapshotSupport();
+
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
 
@@ -752,5 +767,70 @@ public class SnapshotManager implements Stoppable {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  /**
+   * Called at startup, to verify if snapshot operation are supported, and to avoid
+   * starting the master if there're snapshots present but the cleaners needed are missing.
+   * Otherwise we can end up with snapshot data loss.
+   * @throws IOException in case of file-system operation failure
+   * @throws UnsupportedOperationException in case cleaners are missing and
+   *         there're snapshot in the system
+   */
+  private void checkSnapshotSupport(final Configuration conf, final MasterFileSystem mfs)
+      throws IOException, UnsupportedOperationException {
+    boolean hasLogCleaner = false;
+    boolean hasHFileCleaner = false;
+    boolean hasHFileLinkCleaner = false;
+
+    for (String cleaner: conf.getStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS)) {
+      if (cleaner.equals(SnapshotHFileCleaner.class.getName())) {
+        hasHFileCleaner = true;
+      } else if (cleaner.equals(HFileLinkCleaner.class.getName())) {
+        hasHFileLinkCleaner = true;
+      }
+    }
+
+    for (String cleaner: conf.getStrings(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS)) {
+      if (cleaner.equals(SnapshotLogCleaner.class.getName())) {
+        hasLogCleaner = true;
+      }
+    }
+
+    // Mark snapshot feature has enabled if cleaners are present
+    this.isSnapshotSupported = (hasHFileCleaner && hasLogCleaner && hasLogCleaner);
+
+    // If cleaners are not enabled, verify that there're no snapshot in the .snapshot folder
+    // otherwise we end up snapshot with data loss.
+    if (!this.isSnapshotSupported) {
+      LOG.warn("Snapshot feature is not enabled, missing log and hfile cleaners.");
+      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(mfs.getRootDir());
+      FileSystem fs = mfs.getFileSystem();
+      if (fs.exists(snapshotDir)) {
+        FileStatus[] snapshots = FSUtils.listStatus(fs, snapshotDir,
+          new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+        if (snapshots.length > 0) {
+          LOG.error("Snapshots are present, but cleaners are not enabled.");
+          checkSnapshotSupport();
+        }
+      }
+    }
+  }
+
+  /**
+   * Throws an exception if snapshot operations (take a snapshot, restore, clone) are not supported.
+   * Called at the beginning of snapshot() and restoreSnapshot() methods.
+   * @throws UnsupportedOperationException if snapshot are not supported
+   */
+  private void checkSnapshotSupport() throws UnsupportedOperationException {
+    if (!this.isSnapshotSupported) {
+      throw new UnsupportedOperationException(
+        "To been able to use snapshots HBase Master must have cleaners enabled. " +
+        "You must add to the hbase-site.xml: " +
+        "'hbase.master.hfilecleaner.plugins' with '" +
+        HFileLinkCleaner.class.getName() + "', '" + SnapshotHFileCleaner.class.getName() +
+        "' support. And add 'hbase.master.logcleaner.plugins' with '" +
+        SnapshotLogCleaner.class.getName() + "' support.");
+    }
   }
 }
