@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
@@ -242,6 +243,11 @@ public class SnapshotManager implements Stoppable {
    * @throws IOException For filesystem IOExceptions
    */
   public void deleteSnapshot(SnapshotDescription snapshot) throws SnapshotDoesNotExistException, IOException {
+    MasterCoprocessorHost cpHost = this.master.getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preDeleteSnapshot(snapshot);
+    }
+
     // check to see if it is completed
     if (!isSnapshotCompleted(snapshot)) {
       throw new SnapshotDoesNotExistException(snapshot);
@@ -256,6 +262,10 @@ public class SnapshotManager implements Stoppable {
     // delete the existing snapshot
     if (!fs.getFileSystem().delete(snapshotDir, true)) {
       throw new HBaseSnapshotException("Failed to delete snapshot directory: " + snapshotDir);
+    }
+
+    if (cpHost != null) {
+      cpHost.postDeleteSnapshot(snapshot);
     }
   }
 
@@ -456,6 +466,11 @@ public class SnapshotManager implements Stoppable {
     snapshot = snapshot.toBuilder().setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION)
         .build();
 
+    MasterCoprocessorHost cpHost = this.master.getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preSnapshot(snapshot, desc);
+    }
+
     // setup the snapshot
     prepareToTakeSnapshot(snapshot);
 
@@ -477,6 +492,10 @@ public class SnapshotManager implements Stoppable {
       TablePartiallyOpenException tpoe = new TablePartiallyOpenException(snapshot.getTable()
           + " isn't fully open.");
       throw new SnapshotCreationException("Table is not entirely open or closed", tpoe, snapshot);
+    }
+
+    if (cpHost != null) {
+      cpHost.postSnapshot(snapshot, desc);
     }
   }
 
@@ -564,8 +583,13 @@ public class SnapshotManager implements Stoppable {
    * @param waitTime timeout before considering the clone failed
    */
   synchronized void cloneSnapshot(final SnapshotDescription snapshot,
-      final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
+      final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException, IOException {
     String tableName = hTableDescriptor.getNameAsString();
+
+    MasterCoprocessorHost cpHost = this.master.getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preCloneSnapshot(snapshot, hTableDescriptor);
+    }
 
     // make sure we aren't running a snapshot on the same table
     if (isTakingSnapshot(tableName)) {
@@ -586,6 +610,10 @@ public class SnapshotManager implements Stoppable {
       String msg = "Couldn't clone the snapshot=" + snapshot + " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
+    }
+
+    if (cpHost != null) {
+      cpHost.postCloneSnapshot(snapshot, hTableDescriptor);
     }
   }
 
@@ -640,8 +668,13 @@ public class SnapshotManager implements Stoppable {
    * @param waitTime timeout before considering the restore failed
    */
   private synchronized void restoreSnapshot(final SnapshotDescription snapshot,
-      final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException {
+      final HTableDescriptor hTableDescriptor) throws HBaseSnapshotException, IOException {
     String tableName = hTableDescriptor.getNameAsString();
+
+    MasterCoprocessorHost cpHost = this.master.getCoprocessorHost();
+    if (cpHost != null) {
+      cpHost.preRestoreSnapshot(snapshot, hTableDescriptor);
+    }
 
     // make sure we aren't running a snapshot on the same table
     if (isTakingSnapshot(tableName)) {
@@ -662,6 +695,10 @@ public class SnapshotManager implements Stoppable {
       String msg = "Couldn't restore the snapshot=" + snapshot + " on table=" + tableName;
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
+    }
+
+    if (cpHost != null) {
+      cpHost.postRestoreSnapshot(snapshot, hTableDescriptor);
     }
   }
 

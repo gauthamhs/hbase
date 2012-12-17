@@ -98,6 +98,7 @@ public class TestAccessController {
   // user with no permissions
   private static User USER_NONE;
 
+  private static byte[] TEST_SNAPSHOT = Bytes.toBytes("test-snapshot");
   private static byte[] TEST_TABLE = Bytes.toBytes("testtable");
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
@@ -110,6 +111,11 @@ public class TestAccessController {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
+    conf.set("hbase.master.hfilecleaner.plugins",
+      "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner," +
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
+    conf.set("hbase.master.logcleaner.plugins",
+      "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     SecureTestUtil.enableSecurity(conf);
 
     TEST_UTIL.startMiniCluster();
@@ -252,6 +258,25 @@ public class TestAccessController {
   public void verifyDenied(PrivilegedExceptionAction action, User... users) throws Exception {
     for (User user : users) {
       verifyDenied(user, action);
+    }
+  }
+
+  public void verifyException(User user, PrivilegedExceptionAction... actions)
+      throws Exception {
+    for (PrivilegedExceptionAction action : actions) {
+      try {
+        user.runAs(action);
+        fail("Expected an Exception");
+      } catch (IOException e) {
+        // expected result
+      }
+    }
+  }
+
+  public void verifyException(PrivilegedExceptionAction action, User... users)
+      throws Exception {
+    for (User user : users) {
+      verifyException(user, action);
     }
   }
 
@@ -1411,4 +1436,44 @@ public class TestAccessController {
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
   }
 
+  @Test
+  public void testSnapshot() throws Exception {
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+
+    PrivilegedExceptionAction snapshotAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        admin.snapshot(TEST_SNAPSHOT, TEST_TABLE);
+        return null;
+      }
+    };
+    verifyException(snapshotAction, SUPERUSER, USER_ADMIN,
+      USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    PrivilegedExceptionAction deleteAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        admin.deleteSnapshot(TEST_SNAPSHOT);
+        return null;
+      }
+    };
+    verifyException(deleteAction, SUPERUSER, USER_ADMIN,
+      USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    PrivilegedExceptionAction restoreAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        admin.restoreSnapshot(TEST_SNAPSHOT);
+        return null;
+      }
+    };
+    verifyException(restoreAction, SUPERUSER, USER_ADMIN,
+      USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+
+    PrivilegedExceptionAction cloneAction = new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        admin.restoreSnapshot(TEST_SNAPSHOT);
+        return null;
+      }
+    };
+    verifyException(cloneAction, SUPERUSER, USER_ADMIN,
+      USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
 }

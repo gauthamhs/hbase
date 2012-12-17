@@ -575,7 +575,7 @@ Server {
         ", cluster-up flag was=" + wasUp);
 
     // create the snapshot manager
-     this.snapshotManager = new SnapshotManager(this);
+    this.snapshotManager = new SnapshotManager(this);
     this.snapshotManager.start();
   }
 
@@ -2017,6 +2017,7 @@ Server {
     return zooKeeper;
   }
 
+  @Override
   public MasterCoprocessorHost getCoprocessorHost() {
     return cpHost;
   }
