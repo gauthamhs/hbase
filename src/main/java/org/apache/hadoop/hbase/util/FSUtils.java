@@ -73,7 +73,7 @@ public abstract class FSUtils {
   public static FSUtils getInstance(FileSystem fs, Configuration conf) {
     String scheme = fs.getUri().getScheme();
     if (scheme == null) {
-      LOG.warn("Could not find scheme for uri " + 
+      LOG.warn("Could not find scheme for uri " +
           fs.getUri() + ", default to hdfs");
       scheme = "hdfs";
     }
@@ -120,7 +120,7 @@ public abstract class FSUtils {
    * <li>use the default block size</li>
    * <li>not track progress</li>
    * </ol>
-   * 
+   *
    * @param fs {@link FileSystem} on which to write the file
    * @param path {@link Path} to the file to write
    * @return output stream to the created file
@@ -141,7 +141,7 @@ public abstract class FSUtils {
    * <li>use the default block size</li>
    * <li>not track progress</li>
    * </ol>
-   * 
+   *
    * @param fs {@link FileSystem} on which to write the file
    * @param path {@link Path} to the file to write
    * @param perm
@@ -161,7 +161,7 @@ public abstract class FSUtils {
   /**
    * Get the file permissions specified in the configuration, if they are
    * enabled.
-   * 
+   *
    * @param fs filesystem that the file will be created on.
    * @param conf configuration to read for determining if permissions are
    *          enabled and which to use
@@ -228,11 +228,11 @@ public abstract class FSUtils {
   }
 
   /**
-   * Check whether dfs is in safemode. 
+   * Check whether dfs is in safemode.
    * @param conf
    * @throws IOException
    */
-  public static void checkDfsSafeMode(final Configuration conf) 
+  public static void checkDfsSafeMode(final Configuration conf)
   throws IOException {
     boolean isInSafeMode = false;
     FileSystem fs = FileSystem.get(conf);
@@ -245,7 +245,7 @@ public abstract class FSUtils {
       throw new IOException("File system is in safemode, it can't be written now");
     }
   }
-  
+
   /**
    * Verifies current version of file system
    *
@@ -283,7 +283,7 @@ public abstract class FSUtils {
    */
   public static void checkVersion(FileSystem fs, Path rootdir,
       boolean message) throws IOException {
-    checkVersion(fs, rootdir, message, 0, 
+    checkVersion(fs, rootdir, message, 0,
     		HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
@@ -333,7 +333,7 @@ public abstract class FSUtils {
    */
   public static void setVersion(FileSystem fs, Path rootdir)
   throws IOException {
-    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0, 
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0,
     		HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
   }
 
@@ -380,7 +380,7 @@ public abstract class FSUtils {
           fs.delete(versionFile, false);
           try {
             if (wait > 0) {
-              Thread.sleep(wait);  						
+              Thread.sleep(wait);
             }
           } catch (InterruptedException ex) {
             // ignore
@@ -586,9 +586,9 @@ public abstract class FSUtils {
    * @param fs file system
    * @param status file status of the file
    * @param start start position of the portion
-   * @param length length of the portion 
+   * @param length length of the portion
    * @return The HDFS blocks distribution
-   */  
+   */
   static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
     final FileSystem fs, FileStatus status, long start, long length)
     throws IOException {
@@ -600,12 +600,12 @@ public abstract class FSUtils {
       long len = bl.getLength();
       blocksDistribution.addHostsAndBlockWeight(hosts, len);
     }
-    
+
     return blocksDistribution;
   }
-  
 
-  
+
+
   /**
    * Runs through the hbase rootdir and checks all stores have only
    * one file in them -- that is, they've been major compacted.  Looks
@@ -894,7 +894,7 @@ public abstract class FSUtils {
   }
 
   /**
-   * Recover file lease. Used when a file might be suspect 
+   * Recover file lease. Used when a file might be suspect
    * to be had been left open by another process.
    * @param fs FileSystem handle
    * @param p Path of file to recover lease
@@ -903,7 +903,7 @@ public abstract class FSUtils {
    */
   public abstract void recoverFileLease(final FileSystem fs, final Path p,
       Configuration conf) throws IOException;
-  
+
   /**
    * @param fs
    * @param rootdir
@@ -1070,10 +1070,10 @@ public abstract class FSUtils {
   throws IOException {
     return getRootDir(conf).getFileSystem(conf);
   }
-  
+
   /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for 
-   * table StoreFile names to the full Path. 
+   * Runs through the HBase rootdir and creates a reverse lookup map for
+   * table StoreFile names to the full Path.
    * <br>
    * Example...<br>
    * Key = 3944417774205889744  <br>
@@ -1088,17 +1088,17 @@ public abstract class FSUtils {
     final FileSystem fs, final Path hbaseRootDir)
   throws IOException {
     Map<String, Path> map = new HashMap<String, Path>();
-    
-    // if this method looks similar to 'getTableFragmentation' that is because 
+
+    // if this method looks similar to 'getTableFragmentation' that is because
     // it was borrowed from it.
-    
+
     DirFilter df = new DirFilter(fs);
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
       // Skip the .log directory.  All others should be tables.  Inside a table,
       // there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions. 
+      // should be regions.
       Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
@@ -1120,17 +1120,17 @@ public abstract class FSUtils {
             Path sf = sfStatus.getPath();
             map.put( sf.getName(), sf);
           }
-          
+
         }
       }
     }
       return map;
   }
-  
+
   /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This would accommodate difference in various hadoop versions
-   * 
+   * This accommodates differences between hadoop versions
+   *
    * @param fs file system
    * @param dir directory
    * @param filter path filter
@@ -1150,8 +1150,20 @@ public abstract class FSUtils {
   }
   
   /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This would accommodates differences between hadoop versions
+   *
+   * @param fs file system
+   * @param dir directory
+   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   */
+  public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
+    return listStatus(fs, dir, null);
+  }
+
+  /**
    * Calls fs.delete() and returns the value returned by the fs.delete()
-   * 
+   *
    * @param fs
    * @param path
    * @param recursive
@@ -1165,7 +1177,7 @@ public abstract class FSUtils {
 
   /**
    * Throw an exception if an action is not permitted by a user on a file.
-   * 
+   *
    * @param ugi
    *          the user
    * @param file
@@ -1201,7 +1213,7 @@ public abstract class FSUtils {
 
   /**
    * Calls fs.exists(). Checks if the specified path exists
-   * 
+   *
    * @param fs
    * @param path
    * @return
