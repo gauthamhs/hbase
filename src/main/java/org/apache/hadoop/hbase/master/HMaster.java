@@ -1999,6 +1999,10 @@ Server {
     snapshot = snapshot.toBuilder().setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION)
         .build();
 
+    if (cpHost != null) {
+      cpHost.preSnapshot(snapshot, desc);
+    }
+
     // if the table is enabled, then have the RS run actually the snapshot work
     if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
       LOG.debug("Table enabled, starting distributed snapshot.");
@@ -2018,6 +2022,11 @@ Server {
           "Table is not entirely open or closed", new TablePartiallyOpenException(
               snapshot.getTable() + " isn't fully open."), snapshot);
     }
+
+    if (cpHost != null) {
+      cpHost.postSnapshot(snapshot, desc);
+    }
+
     // send back the max amount of time the client should wait for the snapshot to complete
     long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
       SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
@@ -2070,6 +2079,10 @@ Server {
   public void deleteSnapshot(final HSnapshotDescription request) throws IOException {
     SnapshotDescription snapshot = request.getProto();
 
+    if (cpHost != null) {
+      cpHost.preDeleteSnapshot(snapshot);
+    }
+
     // check to see if it is completed
     if (!isSnapshotCompleted(snapshot)) {
       throw new SnapshotDoesNotExistException(snapshot);
@@ -2084,6 +2097,10 @@ Server {
     // delete the existing snapshot
     if (!this.getMasterFileSystem().getFileSystem().delete(snapshotDir, true)) {
       throw new IOException("Failed to delete snapshot directory: " + snapshotDir);
+    }
+
+    if (cpHost != null) {
+      cpHost.postDeleteSnapshot(snapshot);
     }
   }
 
@@ -2176,13 +2193,29 @@ Server {
           snapshot.getTable() + "' must be disabled in order to perform a restore operation.");
       }
 
+      if (cpHost != null) {
+        cpHost.preRestoreSnapshot(snapshot, snapshotTableDesc);
+      }
+
       snapshotManager.restoreSnapshot(snapshot, snapshotTableDesc);
       LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+
+      if (cpHost != null) {
+        cpHost.postRestoreSnapshot(snapshot, snapshotTableDesc);
+      }
     } else {
       HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
                                                          Bytes.toBytes(tableName));
+      if (cpHost != null) {
+        cpHost.preCloneSnapshot(snapshot, htd);
+      }
+
       snapshotManager.cloneSnapshot(snapshot, htd);
       LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
+
+      if (cpHost != null) {
+        cpHost.postCloneSnapshot(snapshot, htd);
+      }
     }
   }
 
