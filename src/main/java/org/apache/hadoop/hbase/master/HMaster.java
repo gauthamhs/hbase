@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -105,11 +106,13 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
 import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.security.User;
@@ -2149,12 +2152,59 @@ Server {
 
   @Override
   public void restoreSnapshot(final HSnapshotDescription request) throws IOException {
-    throw new UnsupportedOperationException("Snapshots restore is not implemented yet.");
+    SnapshotDescription reqSnapshot = request.getProto();
+    FileSystem fs = this.getMasterFileSystem().getFileSystem();
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
+
+    // check if the snapshot exists
+    if (!fs.exists(snapshotDir)) {
+      LOG.error("A Snapshot named '" + reqSnapshot.getName() + "' does not exist.");
+      throw new SnapshotDoesNotExistException(reqSnapshot);
+    }
+
+    // read snapshot information
+    SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+    String tableName = reqSnapshot.getTable();
+
+    // Execute the restore/clone operation
+    if (MetaReader.tableExists(catalogTracker, tableName)) {
+      if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
+        throw new UnsupportedOperationException("Table '" +
+          snapshot.getTable() + "' must be disabled in order to perform a restore operation.");
+      }
+
+      snapshotManager.restoreSnapshot(snapshot, snapshotTableDesc);
+      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+    } else {
+      HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
+                                                         Bytes.toBytes(tableName));
+      snapshotManager.cloneSnapshot(snapshot, htd);
+      LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
+    }
   }
 
   @Override
   public boolean isRestoreSnapshotDone(final HSnapshotDescription request) throws IOException {
-    throw new UnsupportedOperationException("Snapshots restore is not implemented yet.");
+    SnapshotDescription snapshot = request.getProto();
+    SnapshotSentinel sentinel = this.snapshotManager.getRestoreSnapshotSentinel(snapshot.getTable());
+    boolean isDone = true;
+    if (sentinel != null && sentinel.getSnapshot().getName().equals(snapshot.getName())) {
+      HBaseSnapshotException e = sentinel.getExceptionIfFailed();
+      if (e != null) throw e;
+
+      // check to see if we are done
+      if (sentinel.isFinished()) {
+        LOG.debug("Restore snapshot=" + snapshot + " has completed. Notifying the client.");
+      } else {
+        isDone = false;
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Sentinel is not yet finished with restoring snapshot=" + snapshot);
+        }
+      }
+    }
+    return isDone;
   }
 }
 
