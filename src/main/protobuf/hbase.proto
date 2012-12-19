@@ -34,7 +34,9 @@ message SnapshotDescription {
 		DISABLED = 0;
 		TIMESTAMP = 1;
 		GLOBAL = 2;
+		FLUSH = 3;
+		LOGROLL = 4;
 	}
-	optional Type type = 4 [default = TIMESTAMP];
+	optional Type type = 4 [default = FLUSH];
 	optional int32 version = 5;
 }

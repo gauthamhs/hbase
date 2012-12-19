@@ -82,6 +82,7 @@ public class TestSnapshotDescriptionUtils {
     SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
     builder.setName("snapshot");
     builder.setTable("table");
+    builder.setType(SnapshotDescription.Type.TIMESTAMP);
 
     // check that time is to an amount in the future
     Configuration conf = new Configuration(false);
