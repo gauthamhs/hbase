@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.security.TokenInfo;
 import org.apache.hadoop.hbase.security.KerberosInfo;
 import org.apache.hadoop.hbase.util.Pair;
@@ -286,4 +287,17 @@ public interface HMasterInterface extends VersionedProtocol {
    */
   public ExecResult execCoprocessor(Exec call)
       throws IOException;
+
+
+  public long snapshot(final HSnapshotDescription snapshot)
+    throws IOException;
+
+  public List<HSnapshotDescription> listSnapshots()
+    throws IOException;
+
+  public void deleteSnapshot(final HSnapshotDescription snapshot)
+    throws IOException;
+
+  public boolean isSnapshotDone(final HSnapshotDescription snapshot)
+    throws IOException;
 }

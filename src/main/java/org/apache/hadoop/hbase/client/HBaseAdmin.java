@@ -60,10 +60,17 @@ import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.MasterExecRPCInvoker;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest.CompactionState;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
+import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -1906,5 +1913,231 @@ public class HBaseAdmin implements Abortable, Closeable {
         new MasterExecRPCInvoker(conf,
             connection,
             protocol));
+  }
+
+
+  /**
+   * Create a timestamp consistent snapshot for the given table.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   * @throws IOException if a remote or network exception occurs
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(final String snapshotName, final String tableName) throws IOException,
+      SnapshotCreationException, IllegalArgumentException {
+    snapshot(snapshotName, tableName, SnapshotDescription.Type.TIMESTAMP);
+  }
+
+  /**
+   * Create a timestamp consistent snapshot for the given table.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   * @throws IOException if a remote or network exception occurs
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(final byte[] snapshotName, final byte[] tableName) throws IOException,
+      SnapshotCreationException, IllegalArgumentException {
+    snapshot(Bytes.toString(snapshotName), Bytes.toString(tableName));
+  }
+
+  /**
+   * Create typed snapshot of the table.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * <p>
+   * Generally, you should <b>not</b> use this, but instead just take a {@link Type#TIMESTAMP
+   * Timestamp-consistentSnapshot} with {@link #snapshot(byte[], byte[])} or
+   * {@link #snapshot(String, String)}, which creates a timestamp-based snapshot, causing minimal
+   * interference with running cluster.
+   * <p>
+   * However, this method can be used to launch a {@link Type#GLOBAL GlobalSnapshot}. Note that a
+   * {@link Type#GLOBAL GlobalSnapshot}will <b>block all writes to the table</b> while taking the
+   * snapshot. This occurs so a single stable state can be achieved across all servers hosting the
+   * table - this is beyond the consistency constraints placed on an HBase table. This type of
+   * snapshot has two main implications:
+   * <ul>
+   * <li>all writes to the table will block while taking the snapshot</li>
+   * <li>the probability of success decreases with increasing cluster size and is not recommended
+   * for clusters much greater than 500 nodes</li>
+   * </ul>
+   * Together, the two above considerations mean to get a snapshot with any real load on your
+   * system, you will likely have multiple attempts and will suffer notable performance degradation,
+   * for a large cluster.
+   * <p>
+   * This can be suitable for a smaller cluster, but comes with the above caveats - user beware (you
+   * should really consider if you can get by with just using timestamp-consistent snapshots via
+   * {@link #snapshot(byte[], byte[])}) or {@link #snapshot(String, String)}.
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   * snapshots stored on the cluster
+   * @param tableName name of the table to snapshot
+   * @param type type of snapshot to take
+   * @throws IOException we fail to reach the master
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(final String snapshotName, final String tableName,
+      SnapshotDescription.Type type) throws IOException, SnapshotCreationException,
+      IllegalArgumentException {
+    SnapshotDescription.Builder builder = SnapshotDescription.newBuilder();
+    builder.setTable(tableName);
+    builder.setName(snapshotName);
+    builder.setType(type);
+    snapshot(builder.build());
+  }
+
+  /**
+   * Take a snapshot and wait for the server to complete that snapshot (blocking).
+   * <p>
+   * Only a single snapshot should be taken at a time for an instance of HBase, or results may be
+   * undefined (you can tell multiple HBase clusters to snapshot at the same time, but only one at a
+   * time for a single cluster).
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase. See
+   * {@link HTableDescriptor#isLegalTableName(byte[])}.
+   * <p>
+   * You should probably use {@link #snapshot(String, String)} or {@link #snapshot(byte[], byte[])}
+   * unless you are sure about the type of snapshot that you want to take.
+   * @param snapshot snapshot to take
+   * @throws IOException or we lose contact with the master.
+   * @throws SnapshotCreationException if snapshot failed to be taken
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+  public void snapshot(SnapshotDescription snapshot) throws IOException, SnapshotCreationException,
+      IllegalArgumentException {
+    // make sure the snapshot is valid
+    SnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
+
+    HSnapshotDescription snapshotWritable = new HSnapshotDescription(snapshot);
+
+    try {
+      // actually take the snapshot
+      long max = getMaster().snapshot(snapshotWritable);
+      long start = EnvironmentEdgeManager.currentTimeMillis();
+      long maxPauseTime = max / this.numRetries;
+      boolean done = false;
+      int tries = 0;
+      LOG.debug("Waiting a max of " + max + " ms for snapshot to complete. (max " + maxPauseTime
+          + " ms per retry)");
+      while (tries == 0 || (EnvironmentEdgeManager.currentTimeMillis() - start) < max && !done) {
+        try {
+          // sleep a backoff <= pauseTime amount
+          long sleep = getPauseTime(tries++);
+          LOG.debug("Found sleep:" + sleep);
+          sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
+          LOG.debug(tries + ") Sleeping: " + sleep + " ms while we wait for snapshot to complete.");
+          Thread.sleep(sleep);
+
+        } catch (InterruptedException e) {
+          LOG.debug("Interrupted while waiting for snapshot " + snapshot + " to complete");
+          Thread.currentThread().interrupt();
+        }
+        LOG.debug("Getting current status of snapshot from master...");
+        done = getMaster().isSnapshotDone(snapshotWritable);
+      }
+      if (!done) {
+        throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
+            + "' wasn't completed in expectedTime:" + max + " ms", snapshot);
+      }
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  /**
+   * Check the current state of the passed snapshot.
+   * <p>
+   * There are three possible states:
+   * <ol>
+   * <li>running - returns <tt>false</tt></li>
+   * <li>finished - returns <tt>true</tt></li>
+   * <li>finished with error - throws the exception that caused the snapshot to fail</li>
+   * </ol>
+   * <p>
+   * The cluster only knows about the most recent snapshot. Therefore, if another snapshot has been
+   * run/started since the snapshot your are checking, you will recieve an
+   * {@link UnknownSnapshotException}.
+   * @param snapshot description of the snapshot to check
+   * @return <tt>true</tt> if the snapshot is completed, <tt>false</tt> if the snapshot is still
+   * running
+   * @throws IOException if we have a network issue
+   * @throws HBaseSnapshotException if the snapshot failed
+   * @throws UnknownSnapshotException if the requested snapshot is unknown
+   */
+  public boolean isSnapshotFinished(final SnapshotDescription snapshot)
+      throws IOException, HBaseSnapshotException, UnknownSnapshotException {
+    try {
+      return getMaster().isSnapshotDone(new HSnapshotDescription(snapshot));
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  /**
+   * List existing snapshots.
+   * @return a list of snapshot descriptor for existing snapshots
+   * @throws IOException if a network error occurs
+   */
+  public List<SnapshotDescription> listSnapshots() throws IOException {
+    List<SnapshotDescription> snapshots = new LinkedList<SnapshotDescription>();
+    try {
+      for (HSnapshotDescription snapshot: getMaster().listSnapshots()) {
+        snapshots.add(snapshot.getProto());
+      }
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+    return snapshots;
+  }
+
+  /**
+   * Delete an existing snapshot.
+   * @param snapshotName name of the snapshot
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void deleteSnapshot(final byte[] snapshotName) throws IOException {
+    // make sure the snapshot is possibly valid
+    HTableDescriptor.isLegalTableName(snapshotName);
+    // do the delete
+    SnapshotDescription snapshot = SnapshotDescription.newBuilder()
+      .setName(Bytes.toString(snapshotName)).build();
+    try {
+      getMaster().deleteSnapshot(new HSnapshotDescription(snapshot));
+    } catch (RemoteException e) {
+      throw RemoteExceptionHandler.decodeRemoteException(e);
+    }
+  }
+
+  /**
+   * Delete an existing snapshot.
+   * @param snapshotName name of the snapshot
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void deleteSnapshot(final String snapshotName) throws IOException {
+    deleteSnapshot(Bytes.toBytes(snapshotName));
   }
 }

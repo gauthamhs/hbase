@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -1925,5 +1926,29 @@ Server {
    */
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+
+  @Override
+  public long snapshot(final HSnapshotDescription snapshot) throws IOException {
+    throw new IOException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public List<HSnapshotDescription> listSnapshots() throws IOException {
+    throw new IOException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public void deleteSnapshot(final HSnapshotDescription snapshot) throws IOException {
+    throw new IOException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
+  }
+
+  @Override
+  public boolean isSnapshotDone(final HSnapshotDescription snapshot) throws IOException {
+    throw new IOException(new UnsupportedOperationException(
+        "Snapshots are not implemented yet."));
   }
 }
