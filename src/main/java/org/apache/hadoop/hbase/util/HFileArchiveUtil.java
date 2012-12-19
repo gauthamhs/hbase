@@ -41,6 +41,21 @@ public class HFileArchiveUtil {
   /**
    * Get the directory to archive a store directory
    * @param conf {@link Configuration} to read for the archive directory name
+   * @param tableName table name under which the store currently lives
+   * @param regionName region encoded name under which the store currently lives
+   * @param family name of the family in the store
+   * @return {@link Path} to the directory to archive the given store or
+   *         <tt>null</tt> if it should not be archived
+   */
+  public static Path getStoreArchivePath(final Configuration conf, final String tableName,
+      final String regionName, final String familyName) throws IOException {
+    Path tableArchiveDir = getTableArchivePath(conf, tableName);
+    return Store.getStoreHomedir(tableArchiveDir, regionName, familyName);
+  }
+
+  /**
+   * Get the directory to archive a store directory
+   * @param conf {@link Configuration} to read for the archive directory name
    * @param region parent region information under which the store currently
    *          lives
    * @param family name of the family in the store
@@ -96,6 +111,19 @@ public class HFileArchiveUtil {
   public static Path getTableArchivePath(Path tabledir) {
     Path root = tabledir.getParent();
     return new Path(new Path(root,HConstants.HFILE_ARCHIVE_DIRECTORY), tabledir.getName());
+  }
+
+  /**
+   * Get the path to the table archive directory based on the configured archive directory.
+   * <p>
+   * Assumed that the table should already be archived.
+   * @param conf {@link Configuration} to read the archive directory property. Can be null
+   * @param tableName Name of the table to be archived. Cannot be null.
+   * @return {@link Path} to the archive directory for the table
+   */
+  public static Path getTableArchivePath(final Configuration conf, final String tableName)
+      throws IOException {
+    return new Path(getArchivePath(conf), tableName);
   }
 
   /**
