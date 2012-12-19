@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-import java.io.FileNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,7 +112,6 @@ public class SnapshotDescriptionUtils {
 
   /** Temporary directory under the snapshot directory to store in-progress snapshots */
   public static final String SNAPSHOT_TMP_DIR_NAME = ".tmp";
-
   // snapshot operation values
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
@@ -171,7 +169,6 @@ public class SnapshotDescriptionUtils {
       confKey = MASTER_WAIT_TIME_GLOBAL_SNAPSHOT;
       break;
     case TIMESTAMP:
-
       confKey = MASTER_WAIT_TIME_TIMESTAMP_SNAPSHOT;
     case DISABLED:
     default:
@@ -198,6 +195,10 @@ public class SnapshotDescriptionUtils {
       confKey = REGION_WAIT_TIME_TIMESTAMP_SNAPSHOT;
     }
     return conf.getLong(confKey, defaultMaxWaitTime);
+  }
+
+  public static long getMaxRegionTimeout(Configuration conf, SnapshotDescription.Type type) {
+    return getMaxRegionTimeout(conf, type, DEFAULT_MAX_WAIT_TIME);
   }
 
   /**

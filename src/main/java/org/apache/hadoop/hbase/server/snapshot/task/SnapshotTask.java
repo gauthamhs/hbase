@@ -41,7 +41,7 @@ public abstract class SnapshotTask implements ForeignExceptionCheckable, Callabl
     this.errorMonitor = monitor;
   }
 
-  public final void snapshotFailure(String message, Exception e) {
+  public void snapshotFailure(String message, Exception e) {
     ForeignException ee = new ForeignException(message, e);
     errorMonitor.receiveError(message, ee, snapshot);
   }
