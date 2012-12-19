@@ -61,9 +61,9 @@ import org.apache.zookeeper.Op;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 import org.apache.zookeeper.proto.CreateRequest;
 import org.apache.zookeeper.proto.DeleteRequest;
@@ -1077,7 +1077,7 @@ public class ZKUtil {
   }
 
   /**
-   * Creates the specified node, if the node does not exist.  Does not set a
+   * Creates the specified node, iff the node does not exist.  Does not set a
    * watch and fails silently if the node already exists.
    *
    * The node created is persistent and open access.
@@ -1088,8 +1088,13 @@ public class ZKUtil {
    */
   public static void createAndFailSilent(ZooKeeperWatcher zkw,
       String znode) throws KeeperException {
+    createAndFailSilent(zkw, znode, new byte[0]);
+  }
+
+  public static void createAndFailSilent(ZooKeeperWatcher zkw,
+      String znode, byte[] data) throws KeeperException {
     createAndFailSilent(zkw,
-      (CreateAndFailSilent)ZKUtilOp.createAndFailSilent(znode, new byte[0]));
+      (CreateAndFailSilent)ZKUtilOp.createAndFailSilent(znode, data));
   }
 
   private static void createAndFailSilent(ZooKeeperWatcher zkw, CreateAndFailSilent cafs)
