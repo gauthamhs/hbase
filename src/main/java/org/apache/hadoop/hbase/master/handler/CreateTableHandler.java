@@ -50,12 +50,12 @@ import org.apache.zookeeper.KeeperException;
  */
 public class CreateTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CreateTableHandler.class);
-  private MasterFileSystem fileSystemManager;
-  private final HTableDescriptor hTableDescriptor;
-  private Configuration conf;
-  private final AssignmentManager assignmentManager;
-  private final CatalogTracker catalogTracker;
-  private final ServerManager serverManager;
+  protected MasterFileSystem fileSystemManager;
+  protected final HTableDescriptor hTableDescriptor;
+  protected Configuration conf;
+  protected final AssignmentManager assignmentManager;
+  protected final CatalogTracker catalogTracker;
+  protected final ServerManager serverManager;
   private final HRegionInfo [] newRegions;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
@@ -139,9 +139,32 @@ public class CreateTableHandler extends EventHandler {
     // do rename to move it into place?
     FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
 
+    List<HRegionInfo> regionInfos = handleCreateRegions(this.hTableDescriptor.getNameAsString());
+
+    // 4. Trigger immediate assignment of the regions in round-robin fashion
+    List<ServerName> servers = serverManager.getOnlineServersList();
+    // Remove the deadNotExpired servers from the server list.
+    assignmentManager.removeDeadNotExpiredServers(servers);
+    try {
+      this.assignmentManager.assignUserRegions(regionInfos, servers);
+    } catch (InterruptedException ie) {
+      LOG.error("Caught " + ie + " during round-robin assignment");
+      throw new IOException(ie);
+    }
+
+    // 5. Set table enabled flag up in zk.
+    try {
+      assignmentManager.getZKTable().
+        setEnabledTable(this.hTableDescriptor.getNameAsString());
+    } catch (KeeperException e) {
+      throw new IOException("Unable to ensure that the table will be" +
+        " enabled because of a ZooKeeper issue", e);
+    }
+  }
+
+  protected List<HRegionInfo> handleCreateRegions(String tableName) throws IOException {
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
-    final int batchSize =
-      this.conf.getInt("hbase.master.createtable.batchsize", 100);
+    final int batchSize = this.conf.getInt("hbase.master.createtable.batchsize", 100);
     for (int regionIdx = 0; regionIdx < this.newRegions.length; regionIdx++) {
       HRegionInfo newRegion = this.newRegions[regionIdx];
       // 1. Create HRegion
@@ -162,26 +185,6 @@ public class CreateTableHandler extends EventHandler {
     if (regionInfos.size() > 0) {
       MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
     }
-
-    // 4. Trigger immediate assignment of the regions in round-robin fashion
-    List<ServerName> servers = serverManager.getOnlineServersList();
-    // Remove the deadNotExpired servers from the server list.
-    assignmentManager.removeDeadNotExpiredServers(servers);
-    try {
-      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions),
-        servers);
-    } catch (InterruptedException ie) {
-      LOG.error("Caught " + ie + " during round-robin assignment");
-      throw new IOException(ie);
-    }
-
-    // 5. Set table enabled flag up in zk.
-    try {
-      assignmentManager.getZKTable().
-        setEnabledTable(this.hTableDescriptor.getNameAsString());
-    } catch (KeeperException e) {
-      throw new IOException("Unable to ensure that the table will be" +
-        " enabled because of a ZooKeeper issue", e);
-    }
+    return Arrays.asList(this.newRegions);
   }
 }
