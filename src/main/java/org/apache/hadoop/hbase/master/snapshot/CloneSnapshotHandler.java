@@ -25,30 +25,23 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handler to Clone a snapshot.
@@ -62,7 +55,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
 
   private final SnapshotDescription snapshot;
 
-  private final SnapshotExceptionSnare monitor;
+  private final ForeignExceptionDispatcher monitor;
 
   private volatile boolean stopped = false;
 
@@ -78,7 +71,7 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     this.snapshot = snapshot;
 
     // Monitor
-    this.monitor = new SnapshotExceptionSnare(snapshot);
+    this.monitor = new ForeignExceptionDispatcher();
   }
 
   @Override
@@ -101,7 +94,8 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     } catch (Exception e) {
       String msg = "clone snapshot=" + snapshot + " failed";
       LOG.error(msg, e);
-      monitor.snapshotFailure("Failed due to exception:" + e.getMessage(), snapshot, e);
+      ForeignException fe = new ForeignException("Master Clone Handler", e);
+      this.monitor.receiveError("Failed due to exception:" + e.getMessage(), fe);
       throw new RestoreSnapshotException(msg, e);
     } finally {
       this.stopped = true;
@@ -119,23 +113,20 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   }
 
   @Override
-  public void stop(String why) {
+  public void cancel(String why, Throwable t) {
     if (this.stopped) return;
     this.stopped = true;
-    LOG.info("Stopping clone snapshot=" + snapshot + " because: " + why);
-    this.monitor.snapshotFailure("Failing clone snapshot because server is stopping.", snapshot);
+    String msg = "Stopping clone snapshot=" + snapshot + " because: " + why;
+    LOG.info(msg);
+    ForeignException fe = new ForeignException(msg, t);
+    this.monitor.receiveError("Failing clone snapshot because server is stopping.", fe);
   }
 
   @Override
-  public boolean isStopped() {
-    return this.stopped;
-  }
-
-  @Override
-  public HBaseSnapshotException getExceptionIfFailed() {
+  public ForeignException getExceptionIfFailed() {
     try {
-      this.monitor.failOnError();
-    } catch (HBaseSnapshotException e) {
+      this.monitor.rethrowException();
+    } catch (ForeignException e) {
       return e;
     }
     return null;

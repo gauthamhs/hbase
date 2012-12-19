@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -48,9 +47,6 @@ import com.google.common.collect.MutableClassToInstanceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -77,7 +73,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -105,14 +100,6 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
-import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
-import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistException;
-import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
-import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
-import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
-import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.HSnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.security.User;
@@ -479,10 +466,9 @@ Server {
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
 
-    // create the snapshot monitor
-    // TODO should this be config based?
-    this.snapshotManager = new SnapshotManager(this, zooKeeper, this.executorService);
-    snapshotManager.start();
+    // create the snapshot manager
+    this.snapshotManager = new SnapshotManager(this);
+    this.snapshotManager.start();
   }
 
   // Check if we should stop every second.
@@ -1962,70 +1948,19 @@ Server {
     return this.snapshotManager;
    }
 
+  /**
+   * Triggers an asynchronous attempt to take a snapshot.
+   * {@inheritDoc}
+   */
   @Override
   public long snapshot(final HSnapshotDescription request) throws IOException {
-    LOG.debug("Starting snapshot for:" + request.getProto());
+    LOG.debug("Starting snapshot for:" + request);
 
     // get the snapshot information
     SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getProto(),
       this.conf);
 
-    // check to see if we already completed the snapshot
-    if (isSnapshotCompleted(snapshot)) {
-      throw new SnapshotExistsException("Snapshot '" + snapshot.getName() +
-           "' already stored on the filesystem.", snapshot);
-    }
-
-    LOG.debug("No existing snapshot, attempting snapshot...");
-
-    // check to see if the table exists
-    HTableDescriptor desc = null;
-    try {
-      desc = this.tableDescriptors.get(snapshot.getTable());
-    } catch (FileNotFoundException e) {
-      String msg = "Table:" + snapshot.getTable() + " info doesn't exist!";
-      LOG.error(msg);
-      throw new SnapshotCreationException(msg, e, snapshot);
-    } catch (IOException e) {
-      throw new SnapshotCreationException(
-          "Error while geting table description for table " + snapshot.getTable(), e, snapshot);
-    }
-    if (desc == null) {
-      throw new SnapshotCreationException("Table '" + snapshot.getTable() +
-           "' doesn't exist, can't take snapshot.", snapshot);
-    }
-
-    // set the snapshot version, now that we are ready to take it
-    snapshot = snapshot.toBuilder().setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION)
-        .build();
-
-    if (cpHost != null) {
-      cpHost.preSnapshot(snapshot, desc);
-    }
-
-    // if the table is enabled, then have the RS run actually the snapshot work
-    if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
-      LOG.debug("Table enabled, starting distributed snapshot.");
-      throw new UnsupportedOperationException(
-          "Enabled table snapshots are not yet supported");
-    }
-    // For disabled table, snapshot is created by the master
-    else if (this.assignmentManager.getZKTable().isDisabledTable(snapshot.getTable())) {
-      LOG.debug("Table is disabled, running snapshot entirely on master.");
-      snapshotManager.snapshotDisabledTable(snapshot);
-
-      LOG.debug("Started snapshot: " + snapshot);
-    } else {
-      LOG.error("Can't snapshot table '" + snapshot.getTable() +
-           "', isn't open or closed, we don't know what to do!");
-      throw new SnapshotCreationException(
-          "Table is not entirely open or closed", new TablePartiallyOpenException(
-              snapshot.getTable() + " isn't fully open."), snapshot);
-    }
-
-    if (cpHost != null) {
-      cpHost.postSnapshot(snapshot, desc);
-    }
+    snapshotManager.takeSnapshot(snapshot);
 
     // send back the max amount of time the client should wait for the snapshot to complete
     long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
@@ -2033,212 +1968,78 @@ Server {
     return waitTime;
   }
 
+  /**
+   * List the currently available/stored snapshots. Any in-progress snapshots are ignored
+   */
   @Override
   public List<HSnapshotDescription> listSnapshots() throws IOException {
     List<HSnapshotDescription> availableSnapshots = new ArrayList<HSnapshotDescription>();
-
-    // first create the snapshot description and check to see if it exists
-    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(this.getMasterFileSystem()
-        .getRootDir());
-
-    // if there are no snapshots, return an empty list
-    if (!this.getMasterFileSystem().getFileSystem().exists(snapshotDir)) {
-      return availableSnapshots;
-    }
-
-    FileSystem fs = this.getMasterFileSystem().getFileSystem();
-
-    // ignore all the snapshots in progress
-    FileStatus[] snapshots = fs.listStatus(snapshotDir,
-      new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
-    // look through all the completed snapshots
-    for (FileStatus snapshot : snapshots) {
-      Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-      // if the snapshot is bad
-      if (!fs.exists(info)) {
-        LOG.error("Snapshot information for " + snapshot.getPath() + " doesn't exist");
-        continue;
-      }
-      FSDataInputStream in = null;
-      try {
-        in = fs.open(info);
-        SnapshotDescription desc = SnapshotDescription.parseFrom(in);
-        availableSnapshots.add(new HSnapshotDescription(desc));
-      } catch (IOException e) {
-        LOG.warn("Found a corrupted snapshot " + snapshot.getPath(), e);
-      } finally {
-        if (in != null) {
-          in.close();
-        }
-      }
+    List<SnapshotDescription> snapshots = snapshotManager.getCompletedSnapshots();
+    // convert to writable
+    for (SnapshotDescription snapshot : snapshots) {
+      availableSnapshots.add(new HSnapshotDescription(snapshot));
     }
     return availableSnapshots;
   }
 
+  /**
+   * Execute Delete Snapshot operation.
+   * @returns DeleteSnapshotResponse (a protobuf wrapped void) if the snapshot existed and was
+   *    deleted properly.
+   * @throws ServiceException wrapping SnapshotDoesNotExistException if specified snapshot did not
+   *    exist.
+   */
   @Override
   public void deleteSnapshot(final HSnapshotDescription request) throws IOException {
-    SnapshotDescription snapshot = request.getProto();
-
-    if (cpHost != null) {
-      cpHost.preDeleteSnapshot(snapshot);
-    }
-
-    // check to see if it is completed
-    if (!isSnapshotCompleted(snapshot)) {
-      throw new SnapshotDoesNotExistException(snapshot);
-    }
-
-    String snapshotName = snapshot.getName();
-    LOG.debug("Deleting snapshot: " + snapshotName);
-    // first create the snapshot description and check to see if it exists
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, this
-        .getMasterFileSystem().getRootDir());
-
-    // delete the existing snapshot
-    if (!this.getMasterFileSystem().getFileSystem().delete(snapshotDir, true)) {
-      throw new IOException("Failed to delete snapshot directory: " + snapshotDir);
-    }
-
-    if (cpHost != null) {
-      cpHost.postDeleteSnapshot(snapshot);
-    }
-  }
-
-  @Override
-  public boolean isSnapshotDone(final HSnapshotDescription request) throws IOException {
-    LOG.debug("Checking to see if snapshot from request:" + request + " is done");
-
-    SnapshotDescription expected = request.getProto();
-
-    // check the request to make sure it has a snapshot
-    if (expected == null) {
-      throw new UnknownSnapshotException(
-          "No snapshot name passed in request, can't figure out which snapshot you want to check.");
-    }
-
-    // check to see if the sentinel exists
-    SnapshotSentinel sentinel = this.snapshotManager.getCurrentSnapshotSentinel();
-    if (sentinel != null) {
-
-      // pass on any failure we find in the sentinel
-      HBaseSnapshotException e = sentinel.getExceptionIfFailed();
-      if (e != null) throw e;
-
-      // get the current snapshot and compare it against the requested
-      SnapshotDescription snapshot = sentinel.getSnapshot();
-      LOG.debug("Have a snapshot to compare:" + snapshot);
-      if (expected.getName().equals(snapshot.getName())) {
-        LOG.trace("Running snapshot (" + snapshot.getName() + ") does match request:" +
-             expected.getName());
-
-        // check to see if we are done
-        boolean isDone = false;
-        if (sentinel.isFinished()) {
-          isDone = true;
-          LOG.debug("Snapshot " + snapshot + " has completed, notifying client.");
-        } else if (LOG.isDebugEnabled()) {
-          LOG.debug("Sentinel isn't finished with snapshot!");
-        }
-        return isDone;
-      }
-    }
-
-    // check to see if the snapshot is already on the fs
-    if (!isSnapshotCompleted(expected)) {
-      throw new UnknownSnapshotException("Snapshot:" + expected.getName() +
-           " is not currently running or one of the known completed snapshots.");
-    }
-
-    return true;
+    snapshotManager.deleteSnapshot(request.getProto());
   }
 
   /**
-   * Check to see if the snapshot is one of the currently completed snapshots
-   * @param expected snapshot to check
-   * @return <tt>true</tt> if the snapshot is stored on the {@link FileSystem}, <tt>false</tt> if is
-   *         not stored
-   * @throws IOException if the filesystem throws an unexpected exception
+   * Checks if the specified snapshot is done.
+   * @returns true if the snapshot is in file system ready to use,
+   *   false if the snapshot is in the process of completing
+   * @throws ServiceException wrapping UnknownSnapshotException if invalid snapshot, or
+   *  a wrapped HBaseSnapshotException with progress failure reason.
    */
-  private boolean isSnapshotCompleted(SnapshotDescription snapshot) throws IOException {
-    final Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, this
-        .getMasterFileSystem().getRootDir());
-    FileSystem fs = this.getMasterFileSystem().getFileSystem();
-
-    // check to see if the snapshot already exists
-    return fs.exists(snapshotDir);
+  @Override
+  public boolean isSnapshotDone(final HSnapshotDescription request) throws IOException {
+    LOG.debug("Checking to see if snapshot from request:" + request + " is done");
+    return snapshotManager.isSnapshotDone(request.getProto());
   }
 
+  /**
+   * Execute Restore/Clone snapshot operation.
+   *
+   * <p>If the specified table exists a "Restore" is executed, replacing the table
+   * schema and directory data with the content of the snapshot.
+   * The table must be disabled, or a UnsupportedOperationException will be thrown.
+   *
+   * <p>If the table doesn't exist a "Clone" is executed, a new table is created
+   * using the schema at the time of the snapshot, and the content of the snapshot.
+   *
+   * <p>The restore/clone operation does not require copying HFiles. Since HFiles
+   * are immutable the table can point to and use the same files as the original one.
+   */
   @Override
   public void restoreSnapshot(final HSnapshotDescription request) throws IOException {
     SnapshotDescription reqSnapshot = request.getProto();
-    FileSystem fs = this.getMasterFileSystem().getFileSystem();
-    Path rootDir = this.getMasterFileSystem().getRootDir();
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
-
-    // check if the snapshot exists
-    if (!fs.exists(snapshotDir)) {
-      LOG.error("A Snapshot named '" + reqSnapshot.getName() + "' does not exist.");
-      throw new SnapshotDoesNotExistException(reqSnapshot);
-    }
-
-    // read snapshot information
-    SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
-    String tableName = reqSnapshot.getTable();
-
-    // Execute the restore/clone operation
-    if (MetaReader.tableExists(catalogTracker, tableName)) {
-      if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
-        throw new UnsupportedOperationException("Table '" +
-          snapshot.getTable() + "' must be disabled in order to perform a restore operation.");
-      }
-
-      if (cpHost != null) {
-        cpHost.preRestoreSnapshot(snapshot, snapshotTableDesc);
-      }
-
-      snapshotManager.restoreSnapshot(snapshot, snapshotTableDesc);
-      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
-
-      if (cpHost != null) {
-        cpHost.postRestoreSnapshot(snapshot, snapshotTableDesc);
-      }
-    } else {
-      HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
-                                                         Bytes.toBytes(tableName));
-      if (cpHost != null) {
-        cpHost.preCloneSnapshot(snapshot, htd);
-      }
-
-      snapshotManager.cloneSnapshot(snapshot, htd);
-      LOG.info("Clone snapshot=" + snapshot.getName() + " as table=" + tableName);
-
-      if (cpHost != null) {
-        cpHost.postCloneSnapshot(snapshot, htd);
-      }
-    }
+    snapshotManager.restoreSnapshot(reqSnapshot);
   }
 
+  /**
+   * Returns the status of the requested snapshot restore/clone operation.
+   * This method is not exposed to the user, it is just used internally by HBaseAdmin
+   * to verify if the restore is completed.
+   *
+   * No exceptions are thrown if the restore is not running, the result will be "done".
+   *
+   * @return done <tt>true</tt> if the restore/clone operation is completed.
+   * @throws RestoreSnapshotExcepton if the operation failed.
+   */
   @Override
   public boolean isRestoreSnapshotDone(final HSnapshotDescription request) throws IOException {
     SnapshotDescription snapshot = request.getProto();
-    SnapshotSentinel sentinel = this.snapshotManager.getRestoreSnapshotSentinel(snapshot.getTable());
-    boolean isDone = true;
-    if (sentinel != null && sentinel.getSnapshot().getName().equals(snapshot.getName())) {
-      HBaseSnapshotException e = sentinel.getExceptionIfFailed();
-      if (e != null) throw e;
-
-      // check to see if we are done
-      if (sentinel.isFinished()) {
-        LOG.debug("Restore snapshot=" + snapshot + " has completed. Notifying the client.");
-      } else {
-        isDone = false;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sentinel is not yet finished with restoring snapshot=" + snapshot);
-        }
-      }
-    }
-    return isDone;
+    return !snapshotManager.isRestoringTable(snapshot);
   }
 }
 
