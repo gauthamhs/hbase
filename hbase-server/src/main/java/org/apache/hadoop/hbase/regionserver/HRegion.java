@@ -4078,12 +4078,12 @@ public class HRegion implements HeapSize { // , Writable{
     a.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + a);
-      listPaths(fs, a.getRegionDir());
+      FSUtils.logFileSystemState(fs, a.getRegionDir(), LOG);
     }
     b.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + b);
-      listPaths(fs, b.getRegionDir());
+      FSUtils.logFileSystemState(fs, b.getRegionDir(), LOG);
     }
 
     Configuration conf = a.baseConf;
@@ -4160,7 +4160,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for new region");
-      listPaths(fs, newRegionDir);
+      FSUtils.logFileSystemState(fs, newRegionDir, LOG);
     }
     HRegion dstRegion = HRegion.newHRegion(tableDir, log, fs, conf,
         newRegionInfo, a.getTableDesc(), null);
@@ -4174,7 +4174,7 @@ public class HRegion implements HeapSize { // , Writable{
     dstRegion.compactStores();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for new region");
-      listPaths(fs, dstRegion.getRegionDir());
+      FSUtils.logFileSystemState(fs, dstRegion.getRegionDir(), LOG);
     }
 
     // delete out the 'A' region
@@ -4222,32 +4222,6 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return false;
   }
-
-  /*
-   * List the files under the specified directory
-   *
-   * @param fs
-   * @param dir
-   * @throws IOException
-   */
-  private static void listPaths(FileSystem fs, Path dir) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      FileStatus[] stats = FSUtils.listStatus(fs, dir, null);
-      if (stats == null || stats.length == 0) {
-        return;
-      }
-      for (int i = 0; i < stats.length; i++) {
-        String path = stats[i].getPath().toString();
-        if (stats[i].isDir()) {
-          LOG.debug("d " + path);
-          listPaths(fs, stats[i].getPath());
-        } else {
-          LOG.debug("f " + path + " size=" + stats[i].getLen());
-        }
-      }
-    }
-  }
-
 
   //
   // HBASE-880
