@@ -158,7 +158,7 @@ public class TestStore extends TestCase {
     HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, htd, null);
 
-    store = new HStore(basedir, region, hcd, fs, conf);
+    store = new HStore(basedir, region, hcd, conf);
   }
 
   /**
@@ -320,7 +320,7 @@ public class TestStore extends TestCase {
     // Reopen it... should pick up two files
     this.store = new HStore(storedir.getParent().getParent(),
       this.store.getHRegion(),
-      this.store.getFamily(), fs, c);
+      this.store.getFamily(), c);
     System.out.println(this.store.getHRegionInfo().getEncodedName());
     assertEquals(2, this.store.getStorefilesCount());
 

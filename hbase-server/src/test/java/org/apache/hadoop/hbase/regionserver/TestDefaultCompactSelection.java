@@ -101,7 +101,7 @@ public class TestDefaultCompactSelection extends TestCase {
     Path tableDir = new Path(basedir, Bytes.toString(htd.getName()));
     region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
 
-    store = new HStore(basedir, region, hcd, fs, conf);
+    store = new HStore(basedir, region, hcd, conf);
     manager = store.compactionPolicy;
 
     TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());

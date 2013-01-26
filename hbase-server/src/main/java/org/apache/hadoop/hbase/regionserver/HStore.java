@@ -114,7 +114,7 @@ public class HStore implements Store, StoreConfiguration {
   private final HRegion region;
   private final HColumnDescriptor family;
   CompactionPolicy compactionPolicy;
-  final FileSystem fs;
+  final HRegionFileSystem fs;
   final Configuration conf;
   final CacheConfig cacheConf;
   // ttl in milliseconds. TODO: can this be removed? Already stored in scanInfo.
@@ -172,15 +172,13 @@ public class HStore implements Store, StoreConfiguration {
    * @throws IOException
    */
   protected HStore(Path basedir, HRegion region, HColumnDescriptor family,
-      FileSystem fs, Configuration confParam)
-  throws IOException {
+      Configuration confParam) throws IOException {
 
     HRegionInfo info = region.getRegionInfo();
-    this.fs = fs;
-    // Assemble the store's home directory.
-    Path p = getStoreHomedir(basedir, info.getEncodedName(), family.getName());
+    this.fs = region.getRegionFileSystem();
+
     // Ensure it exists.
-    this.homedir = createStoreHomeDir(this.fs, p);
+    this.homedir = fs.createStoreDir(family.getNameAsString());
     this.region = region;
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
@@ -289,7 +287,7 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   FileSystem getFileSystem() {
-    return this.fs;
+    return this.fs.getFileSystem();
   }
 
   /* Implementation of StoreConfiguration */
@@ -400,10 +398,6 @@ public class HStore implements Store, StoreConfiguration {
     this.dataBlockEncoder = blockEncoder;
   }
 
-  FileStatus[] getStoreFiles() throws IOException {
-    return FSUtils.listStatus(this.fs, this.homedir, null);
-  }
-
   /**
    * Creates an unsorted list of StoreFile loaded in parallel
    * from the given directory.
@@ -411,37 +405,26 @@ public class HStore implements Store, StoreConfiguration {
    */
   private List<StoreFile> loadStoreFiles() throws IOException {
     ArrayList<StoreFile> results = new ArrayList<StoreFile>();
-    FileStatus files[] = getStoreFiles();
 
-    if (files == null || files.length == 0) {
+    Collection<HRegionFileSystem.StoreFileInfo> files = fs.getStoreFiles(getColumnFamilyName());
+    if (files == null || files.size() == 0) {
       return results;
     }
+
     // initialize the thread pool for opening store files in parallel..
     ThreadPoolExecutor storeFileOpenerThreadPool =
       this.region.getStoreFileOpenAndCloseThreadPool("StoreFileOpenerThread-" +
-          this.family.getNameAsString());
+          getColumnFamilyName());
     CompletionService<StoreFile> completionService =
       new ExecutorCompletionService<StoreFile>(storeFileOpenerThreadPool);
 
+    final FileSystem fs = this.getFileSystem();
     int totalValidStoreFile = 0;
-    for (int i = 0; i < files.length; i++) {
-      // Skip directories.
-      if (files[i].isDir()) {
-        continue;
-      }
-      final Path p = files[i].getPath();
-      // Check for empty hfile. Should never be the case but can happen
-      // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
-      // NOTE: that the HFileLink is just a name, so it's an empty file.
-      if (!HFileLink.isHFileLink(p) && this.fs.getFileStatus(p).getLen() <= 0) {
-        LOG.warn("Skipping " + p + " because its empty. HBASE-646 DATA LOSS?");
-        continue;
-      }
-
+    for (final HRegionFileSystem.StoreFileInfo storeFileInfo: files) {
       // open each store file in parallel
       completionService.submit(new Callable<StoreFile>() {
         public StoreFile call() throws IOException {
-          StoreFile storeFile = new StoreFile(fs, p, conf, cacheConf,
+          StoreFile storeFile = new StoreFile(fs, storeFileInfo.getPath(), conf, cacheConf,
               family.getBloomFilterType(), dataBlockEncoder);
           storeFile.createReader();
           return storeFile;
@@ -468,8 +451,8 @@ public class HStore implements Store, StoreConfiguration {
           if (ioe == null) ioe = new InterruptedIOException(e.getMessage());
         } catch (ExecutionException e) {
           if (ioe == null) ioe = new IOException(e.getCause());
-        } 
-      } 
+        }
+      }
     } finally {
       storeFileOpenerThreadPool.shutdownNow();
     }
@@ -594,6 +577,8 @@ public class HStore implements Store, StoreConfiguration {
   public void bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
     Path srcPath = new Path(srcPathStr);
 
+    FileSystem fs = this.getFileSystem();
+
     // Copy the file if it's on another filesystem
     FileSystem srcFs = srcPath.getFileSystem(conf);
     FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
@@ -651,8 +636,7 @@ public class HStore implements Store, StoreConfiguration {
    * still around.
    */
   private Path getTmpPath() throws IOException {
-    return StoreFile.getRandomFilename(
-        fs, region.getTmpDir());
+    return StoreFile.getRandomFilename(this.getFileSystem(), region.getTmpDir());
   }
 
   @Override
@@ -898,12 +882,12 @@ public class HStore implements Store, StoreConfiguration {
     String msg = "Renaming flushed file at " + path + " to " + dstPath;
     LOG.debug(msg);
     status.setStatus("Flushing " + this + ": " + msg);
-    if (!fs.rename(path, dstPath)) {
+    if (!this.getFileSystem().rename(path, dstPath)) {
       LOG.warn("Unable to rename " + path + " to " + dstPath);
     }
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
-    StoreFile sf = new StoreFile(this.fs, dstPath, this.conf, this.cacheConf,
+    StoreFile sf = new StoreFile(this.getFileSystem(), dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.dataBlockEncoder);
 
     StoreFile.Reader r = sf.createReader();
@@ -945,7 +929,7 @@ public class HStore implements Store, StoreConfiguration {
       writerCacheConf = cacheConf;
     }
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
-        fs, blocksize)
+        this.getFileSystem(), blocksize)
             .withOutputDir(region.getTmpDir())
             .withDataBlockEncoder(dataBlockEncoder)
             .withComparator(comparator)
@@ -1106,7 +1090,7 @@ public class HStore implements Store, StoreConfiguration {
         }
       } else {
         // Create storefile around what we wrote with a reader on it.
-        sf = new StoreFile(this.fs, writer.getPath(), this.conf, this.cacheConf,
+        sf = new StoreFile(this.getFileSystem(), writer.getPath(), this.conf, this.cacheConf,
           this.family.getBloomFilterType(), this.dataBlockEncoder);
         sf.createReader();
       }
@@ -1306,7 +1290,7 @@ public class HStore implements Store, StoreConfiguration {
       throws IOException {
     StoreFile storeFile = null;
     try {
-      storeFile = new StoreFile(this.fs, path, this.conf,
+      storeFile = new StoreFile(this.getFileSystem(), path, this.conf,
           this.cacheConf, this.family.getBloomFilterType(),
           NoOpDataBlockEncoder.INSTANCE);
       storeFile.createReader();
@@ -1352,13 +1336,13 @@ public class HStore implements Store, StoreConfiguration {
       Path origPath = compactedFile.getPath();
       Path destPath = new Path(homedir, origPath.getName());
       LOG.info("Renaming compacted file at " + origPath + " to " + destPath);
-      if (!fs.rename(origPath, destPath)) {
+      if (!this.getFileSystem().rename(origPath, destPath)) {
         LOG.error("Failed move of compacted file " + origPath + " to " +
             destPath);
         throw new IOException("Failed move of compacted file " + origPath +
             " to " + destPath);
       }
-      result = new StoreFile(this.fs, destPath, this.conf, this.cacheConf,
+      result = new StoreFile(this.getFileSystem(), destPath, this.conf, this.cacheConf,
           this.family.getBloomFilterType(), this.dataBlockEncoder);
       result.createReader();
     }
@@ -1393,7 +1377,7 @@ public class HStore implements Store, StoreConfiguration {
 
       // let the archive util decide if we should archive or delete the files
       LOG.debug("Removing store files after compaction...");
-      HFileArchiver.archiveStoreFiles(this.conf, this.fs, this.region,
+      HFileArchiver.archiveStoreFiles(this.conf, this.getFileSystem(), this.region,
         this.family.getName(), compactedFiles);
 
     } catch (IOException e) {

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -110,6 +111,84 @@ public class HRegionFileSystem {
 
   public void cleanupSplitsDir() throws IOException {
     FSUtils.deleteDirectory(fs, getSplitsDir());
+  }
+
+  public static class StoreFileInfo {
+    private final FileStatus fileStatus;
+
+    public StoreFileInfo(final HRegionFileSystem fs, final FileStatus fileStatus) {
+      this.fileStatus = fileStatus;
+    }
+
+    public static boolean isValid(final HRegionFileSystem fs, final FileStatus fileStatus)
+        throws IOException {
+      final Path p = fileStatus.getPath();
+
+      if (fileStatus.isDir())
+        return false;
+
+      // Check for empty hfile. Should never be the case but can happen
+      // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
+      // NOTE: that the HFileLink is just a name, so it's an empty file.
+      if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0) {
+        LOG.warn("Skipping " + p + " beccreateStoreDirause its empty. HBASE-646 DATA LOSS?");
+        return false;
+      }
+
+      return true;
+    }
+
+    public Path getPath() {
+      return this.fileStatus.getPath();
+    }
+
+    private boolean isReference() {
+      return false;
+    }
+
+    private boolean isLink() {
+      return false;
+    }
+  }
+
+
+  public Path createStoreDir(final String familyName) throws IOException {
+    Path storeDir = new Path(getRegionDir(), familyName);
+    if (!fs.exists(storeDir)) {
+      if (!fs.mkdirs(storeDir))
+        throw new IOException("Failed create of: " + storeDir);
+    }
+    return storeDir;
+  }
+
+  public Collection<StoreFileInfo> getStoreFiles(final byte[] familyName) throws IOException {
+    return getStoreFiles(Bytes.toString(familyName));
+  }
+
+  public Collection<StoreFileInfo> getStoreFiles(final String familyName) throws IOException {
+    Path familyDir = new Path(getRegionDir(), familyName);
+    FileStatus[] files = FSUtils.listStatus(this.fs, familyDir);
+    if (files == null) return null;
+
+    ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>(files.length);
+    for (FileStatus status: files) {
+      if (!StoreFileInfo.isValid(this, status)) continue;
+
+      StoreFileInfo storeFileInfo = new StoreFileInfo(this, status);
+      storeFiles.add(storeFileInfo);
+    }
+    return storeFiles;
+  }
+
+  public Collection<String> getFamilies() throws IOException {
+    FileStatus[] fds = FSUtils.listStatus(fs, getRegionDir(), new FSUtils.FamilyDirFilter(fs));
+    if (fds == null) return null;
+
+    ArrayList<String> families = new ArrayList<String>(fds.length);
+    for (FileStatus status: fds) {
+      families.add(status.getPath().getName());
+    }
+    return families;
   }
 
   /**
@@ -272,7 +351,7 @@ public class HRegionFileSystem {
 
     // TODO: Use the archiver
     if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETING region " + regiondir.toString());
+      LOG.debug("DELETING region " + regiondir);
     }
     if (!fs.delete(regiondir, true)) {
       LOG.warn("Failed delete of " + regiondir);

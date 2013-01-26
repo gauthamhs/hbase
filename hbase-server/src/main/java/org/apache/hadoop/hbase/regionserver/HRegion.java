@@ -1103,6 +1103,10 @@ public class HRegion implements HeapSize { // , Writable{
     return fs.getFileSystem();
   }
 
+  public HRegionFileSystem getRegionFileSystem() {
+    return this.fs;
+  }
+
   /** @return the last time the region was flushed */
   public long getLastFlushTime() {
     return this.lastFlushTime;
@@ -2893,7 +2897,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected HStore instantiateHStore(Path tableDir, HColumnDescriptor c)
       throws IOException {
-    return new HStore(tableDir, this, c, this.getFilesystem(), this.conf);
+    return new HStore(tableDir, this, c, this.conf);
   }
 
   /**

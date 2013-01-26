@@ -346,7 +346,7 @@ public class HFileReadWriteTest {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     HRegion region = new HRegion(outputDir, null, fs, conf, regionInfo, htd,
         null);
-    HStore store = new HStore(outputDir, region, columnDescriptor, fs, conf);
+    HStore store = new HStore(outputDir, region, columnDescriptor, conf);
 
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf,
         new CacheConfig(conf), fs, blockSize)

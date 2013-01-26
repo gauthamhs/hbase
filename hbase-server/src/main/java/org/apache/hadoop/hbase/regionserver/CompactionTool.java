@@ -175,17 +175,7 @@ public class CompactionTool extends Configured implements Tool {
       HColumnDescriptor hcd = region.getTableDesc().getFamily(familyName);
       // Create a Store w/ check of hbase.rootdir blanked out and return our
       // list of files instead of have Store search its home dir.
-      return new HStore(tmpDir, region, hcd, fs, conf) {
-        @Override
-        public FileStatus[] getStoreFiles() throws IOException {
-          return this.fs.listStatus(getHomedir());
-        }
-
-        @Override
-        Path createStoreHomeDir(FileSystem fs, Path homedir) throws IOException {
-          return storeDir;
-        }
-      };
+      return new HStore(tmpDir, region, hcd, conf);
     }
 
     private static HRegion loadRegion(final FileSystem fs, final Configuration conf,
