@@ -182,7 +182,6 @@ import com.google.protobuf.Service;
 @InterfaceAudience.Private
 public class HRegion implements HeapSize { // , Writable{
   public static final Log LOG = LogFactory.getLog(HRegion.class);
-  private static final String MERGEDIR = ".merges";
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
@@ -214,11 +213,6 @@ public class HRegion implements HeapSize { // , Writable{
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
-  /**
-   * Temporary subdirectory of the region directory used for compaction output.
-   */
-  public static final String REGION_TEMP_SUBDIR = ".tmp";
-
   //These variable are just used for getting data out of the region, to test on
   //client side
   // private int numStores = 0;
@@ -242,14 +236,8 @@ public class HRegion implements HeapSize { // , Writable{
   //How long operations were blocked by a memstore over highwater.
   final Counter updatesBlockedMs = new Counter();
 
-  /**
-   * The directory for the table this region is part of.
-   * This directory contains the directory for this region.
-   */
-  private final Path tableDir;
-
   private final HLog log;
-  private final FileSystem fs;
+  private final HRegionFileSystem fs;
   private final Configuration conf;
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
@@ -277,8 +265,6 @@ public class HRegion implements HeapSize { // , Writable{
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
 
-  private final HRegionInfo regionInfo;
-  private final Path regiondir;
   KeyValue.KVComparator comparator;
 
   private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
@@ -380,10 +366,6 @@ public class HRegion implements HeapSize { // , Writable{
   // Coprocessor host
   private RegionCoprocessorHost coprocessorHost;
 
-  /**
-   * Name of the region info file that resides just under the region directory.
-   */
-  public final static String REGIONINFO_FILE = ".regioninfo";
   private HTableDescriptor htableDescriptor = null;
   private RegionSplitPolicy splitPolicy;
 
@@ -423,19 +405,27 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @see HRegion#newHRegion(Path, HLog, FileSystem, Configuration, HRegionInfo, HTableDescriptor, RegionServerServices)
    */
-  public HRegion(Path tableDir, HLog log, FileSystem fs,
-      Configuration confParam, final HRegionInfo regionInfo,
-      final HTableDescriptor htd, RegionServerServices rsServices) {
+  public HRegion(final Path tableDir, final HLog log, final FileSystem fs,
+      final Configuration confParam, final HRegionInfo regionInfo,
+      final HTableDescriptor htd, final RegionServerServices rsServices) {
+    this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
+      log, confParam, regionInfo, htd, rsServices);
+  }
+
+  public HRegion(final HRegionFileSystem fs, final HLog log,
+      final Configuration confParam, final HRegionInfo regionInfo,
+      final HTableDescriptor htd, final RegionServerServices rsServices) {
     if (htd == null) {
       throw new IllegalArgumentException("Need table descriptor");
     }
-    this.tableDir = tableDir;
-    this.comparator = regionInfo.getComparator();
-    this.log = log;
-    this.fs = fs;
     if (confParam instanceof CompoundConfiguration) {
       throw new IllegalArgumentException("Need original base configuration");
     }
+
+    this.comparator = regionInfo.getComparator();
+    this.log = log;
+    this.fs = fs;
+
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
     this.baseConf = confParam;
     this.conf = new CompoundConfiguration()
@@ -446,14 +436,12 @@ public class HRegion implements HeapSize { // , Writable{
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
     this.isLoadingCfsOnDemandDefault = conf.getBoolean(LOAD_CFS_ON_DEMAND_CONFIG_KEY, false);
-    this.regionInfo = regionInfo;
     this.htableDescriptor = htd;
     this.rsServices = rsServices;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
-    String encodedNameStr = this.regionInfo.getEncodedName();
+    String encodedNameStr = this.getRegionInfo().getEncodedName();
     setHTableSpecificConf();
-    this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
     this.busyWaitDuration = conf.getLong(
@@ -556,11 +544,11 @@ public class HRegion implements HeapSize { // , Writable{
 
     // Write HRI to a file in case we need to recover .META.
     status.setStatus("Writing region info on filesystem");
-    checkRegioninfoOnFilesystem();
+    fs.checkRegionInfoOnFilesystem();
 
     // Remove temporary data left over from old regions
     status.setStatus("Cleaning up temporary data from old regions");
-    cleanupTmpDir();
+    fs.cleanupTempDir();
 
     // Load in all the HStores.
     //
@@ -578,7 +566,7 @@ public class HRegion implements HeapSize { // , Writable{
       // initialize the thread pool for opening stores in parallel.
       ThreadPoolExecutor storeOpenerThreadPool =
         getStoreOpenAndCloseThreadPool(
-          "StoreOpenerThread-" + this.regionInfo.getRegionNameAsString());
+          "StoreOpenerThread-" + this.getRegionInfo().getRegionNameAsString());
       CompletionService<HStore> completionService =
         new ExecutorCompletionService<HStore>(storeOpenerThreadPool);
 
@@ -587,7 +575,7 @@ public class HRegion implements HeapSize { // , Writable{
         status.setStatus("Instantiating store for column family " + family);
         completionService.submit(new Callable<HStore>() {
           public HStore call() throws IOException {
-            return instantiateHStore(tableDir, family);
+            return instantiateHStore(getTableDir(), family);
           }
         });
       }
@@ -622,14 +610,14 @@ public class HRegion implements HeapSize { // , Writable{
     mvcc.initialize(maxMemstoreTS + 1);
     // Recover any edits if available.
     maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
-        this.regiondir, maxSeqIdInStores, reporter, status));
+        this.getRegionDir(), maxSeqIdInStores, reporter, status));
 
     status.setStatus("Cleaning up detritus from prior splits");
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
     SplitTransaction.cleanupAnySplitDetritus(this);
-    FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
+    fs.cleanupSplitsDir();
     this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
 
     this.writestate.flushRequested = false;
@@ -759,116 +747,20 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Write out an info file under the stored region directory. Useful recovering mangled regions.
-   * @throws IOException
-   */
-  private void checkRegioninfoOnFilesystem() throws IOException {
-    checkRegioninfoOnFilesystem(this.regiondir);
-  }
-
-  /**
-   * Write out an info file under the region directory. Useful recovering mangled regions.
-   * @param regiondir directory under which to write out the region info
-   * @throws IOException
-   */
-  private void checkRegioninfoOnFilesystem(Path regiondir) throws IOException {
-    writeRegioninfoOnFilesystem(regionInfo, regiondir, getFilesystem(), conf);
-  }
-
-  /**
-   * Write out an info file under the region directory. Useful recovering mangled regions. If the
-   * regioninfo already exists on disk and there is information in the file, then we fast exit.
-   * @param regionInfo information about the region
-   * @param regiondir directory under which to write out the region info
-   * @param fs {@link FileSystem} on which to write the region info
-   * @param conf {@link Configuration} from which to extract specific file locations
-   * @throws IOException on unexpected error.
-   */
-  public static void writeRegioninfoOnFilesystem(HRegionInfo regionInfo, Path regiondir,
-      FileSystem fs, Configuration conf) throws IOException {
-    Path regioninfoPath = new Path(regiondir, REGIONINFO_FILE);
-    // Compose the content of the file so we can compare to length in filesystem. If not same,
-    // rewrite it (it may have been written in the old format using Writables instead of pb). The
-    // pb version is much shorter -- we write now w/o the toString version -- so checking length
-    // only should be sufficient. I don't want to read the file every time to check if it pb
-    // serialized.
-    byte[] content = getDotRegionInfoFileContent(regionInfo);
-    boolean exists = fs.exists(regioninfoPath);
-    FileStatus status = exists ? fs.getFileStatus(regioninfoPath) : null;
-    if (status != null && status.getLen() == content.length) {
-      // Then assume the content good and move on.
-      return;
-    }
-    // Create in tmpdir and then move into place in case we crash after
-    // create but before close. If we don't successfully close the file,
-    // subsequent region reopens will fail the below because create is
-    // registered in NN.
-
-    // First check to get the permissions
-    FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
-
-    // And then create the file
-    Path tmpPath = new Path(getTmpDir(regiondir), REGIONINFO_FILE);
-
-    // If datanode crashes or if the RS goes down just before the close is called while trying to
-    // close the created regioninfo file in the .tmp directory then on next
-    // creation we will be getting AlreadyCreatedException.
-    // Hence delete and create the file if exists.
-    if (FSUtils.isExists(fs, tmpPath)) {
-      FSUtils.delete(fs, tmpPath, true);
-    }
-
-    FSDataOutputStream out = FSUtils.create(fs, tmpPath, perms);
-    try {
-      // We used to write out this file as serialized Writable followed by '\n\n' and then the
-      // toString of the HRegionInfo but now we just write out the pb serialized bytes so we can
-      // for sure tell whether the content has been pb'd or not just by looking at file length; the
-      // pb version will be shorter.
-      out.write(content);
-    } finally {
-      out.close();
-    }
-    if (exists) {
-      LOG.info("Rewriting .regioninfo file at " + regioninfoPath);
-      if (!fs.delete(regioninfoPath, false)) {
-        throw new IOException("Unable to remove existing " + regioninfoPath);
-      }
-    }
-    if (!fs.rename(tmpPath, regioninfoPath)) {
-      throw new IOException("Unable to rename " + tmpPath + " to " + regioninfoPath);
-    }
-  }
-
-  /**
-   * @param hri
-   * @return Content of the file we write out to the filesystem under a region
-   * @throws IOException
-   */
-  private static byte [] getDotRegionInfoFileContent(final HRegionInfo hri) throws IOException {
-    return hri.toDelimitedByteArray();
-  }
-
-  /**
    * @param fs
    * @param dir
    * @return An HRegionInfo instance gotten from the <code>.regioninfo</code> file under region dir
    * @throws IOException
    */
   public static HRegionInfo loadDotRegionInfoFileContent(final FileSystem fs, final Path dir)
-  throws IOException {
-    Path regioninfo = new Path(dir, HRegion.REGIONINFO_FILE);
-    if (!fs.exists(regioninfo)) throw new FileNotFoundException(regioninfo.toString());
-    FSDataInputStream in = fs.open(regioninfo);
-    try {
-      return HRegionInfo.parseFrom(in);
-    } finally {
-      in.close();
-    }
+      throws IOException {
+    Path regioninfo = new Path(dir, HRegionFileSystem.REGION_INFO_FILE);
+    return HRegionFileSystem.loadRegionInfoFileContent(fs, regioninfo);
   }
 
   /** @return a HRegionInfo object for this region */
   public HRegionInfo getRegionInfo() {
-    return this.regionInfo;
+    return fs.getRegionInfo();
   }
 
   /**
@@ -1032,7 +924,7 @@ public class HRegion implements HeapSize { // , Writable{
         // initialize the thread pool for closing stores in parallel.
         ThreadPoolExecutor storeCloserThreadPool =
           getStoreOpenAndCloseThreadPool("StoreCloserThread-"
-            + this.regionInfo.getRegionNameAsString());
+            + this.getRegionInfo().getRegionNameAsString());
         CompletionService<ImmutableList<StoreFile>> completionService =
           new ExecutorCompletionService<ImmutableList<StoreFile>>(
             storeCloserThreadPool);
@@ -1146,27 +1038,27 @@ public class HRegion implements HeapSize { // , Writable{
 
   /** @return start key for region */
   public byte [] getStartKey() {
-    return this.regionInfo.getStartKey();
+    return this.getRegionInfo().getStartKey();
   }
 
   /** @return end key for region */
   public byte [] getEndKey() {
-    return this.regionInfo.getEndKey();
+    return this.getRegionInfo().getEndKey();
   }
 
   /** @return region id */
   public long getRegionId() {
-    return this.regionInfo.getRegionId();
+    return this.getRegionInfo().getRegionId();
   }
 
   /** @return region name */
   public byte [] getRegionName() {
-    return this.regionInfo.getRegionName();
+    return this.getRegionInfo().getRegionName();
   }
 
   /** @return region name as string for logging */
   public String getRegionNameAsString() {
-    return this.regionInfo.getRegionNameAsString();
+    return this.getRegionInfo().getRegionNameAsString();
   }
 
   /** @return HTableDescriptor for this region */
@@ -1192,7 +1084,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /** @return region directory Path */
   public Path getRegionDir() {
-    return this.regiondir;
+    return fs.getRegionDir();
   }
 
   /**
@@ -1208,7 +1100,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /** @return FileSystem being used by this region */
   public FileSystem getFilesystem() {
-    return this.fs;
+    return fs.getFileSystem();
   }
 
   /** @return the last time the region was flushed */
@@ -1242,27 +1134,12 @@ public class HRegion implements HeapSize { // , Writable{
   void doRegionCompactionPrep() throws IOException {
   }
 
-  /*
-   * Removes the temporary directory for this Store.
-   */
-  private void cleanupTmpDir() throws IOException {
-    FSUtils.deleteDirectory(this.fs, getTmpDir());
-  }
-
   /**
    * Get the temporary directory for this region. This directory
    * will have its contents removed when the region is reopened.
    */
   Path getTmpDir() {
-    return getTmpDir(getRegionDir());
-  }
-
-  /**
-   * Get the temporary directory for the specified region. This directory
-   * will have its contents removed when the region is reopened.
-   */
-  static Path getTmpDir(Path regionDir) {
-    return new Path(regionDir, REGION_TEMP_SUBDIR);
+    return fs.getTempDir();
   }
 
   void triggerMajorCompaction() {
@@ -1561,9 +1438,9 @@ public class HRegion implements HeapSize { // , Writable{
       mvcc.advanceMemstore(w);
 
       if (wal != null) {
-        Long startSeqId = wal.startCacheFlush(this.regionInfo.getEncodedNameAsBytes());
+        Long startSeqId = wal.startCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
         if (startSeqId == null) {
-          status.setStatus("Flush will not be started for [" + this.regionInfo.getEncodedName()
+          status.setStatus("Flush will not be started for [" + this.getRegionInfo().getEncodedName()
               + "] - WAL is going away");
           return false;
         }
@@ -1633,7 +1510,7 @@ public class HRegion implements HeapSize { // , Writable{
       // exceptions -- e.g. HBASE-659 was about an NPE -- so now we catch
       // all and sundry.
       if (wal != null) {
-        wal.abortCacheFlush(this.regionInfo.getEncodedNameAsBytes());
+        wal.abortCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
       }
       DroppedSnapshotException dse = new DroppedSnapshotException("region: " +
           Bytes.toStringBinary(getRegionName()));
@@ -1644,7 +1521,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // If we get to here, the HStores have been written.
     if (wal != null) {
-      wal.completeCacheFlush(this.regionInfo.getEncodedNameAsBytes());
+      wal.completeCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
     }
 
     // Update the last flushed sequence id for region
@@ -2246,7 +2123,7 @@ public class HRegion implements HeapSize { // , Writable{
       // STEP 5. Append the edit to WAL. Do not sync wal.
       // -------------------------
       Mutation first = batchOp.operations[firstIndex].getFirst();
-      txid = this.log.appendNoSync(regionInfo, this.htableDescriptor.getName(),
+      txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
                walEdit, first.getClusterId(), now, this.htableDescriptor);
 
       // -------------------------------
@@ -2761,15 +2638,16 @@ public class HRegion implements HeapSize { // , Writable{
     }
     long seqid = minSeqIdForTheRegion;
 
+    FileSystem fs = this.getFilesystem();
     NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
 
     for (Path edits: files) {
-      if (edits == null || !this.fs.exists(edits)) {
+      if (edits == null || !fs.exists(edits)) {
         LOG.warn("Null or non-existent edits file: " + edits);
         continue;
       }
-      if (isZeroLengthThenDelete(this.fs, edits)) continue;
+      if (isZeroLengthThenDelete(fs, edits)) continue;
 
       long maxSeqId = Long.MAX_VALUE;
       String fileName = edits.getName();
@@ -2807,7 +2685,7 @@ public class HRegion implements HeapSize { // , Writable{
       // The edits size added into rsAccounting during this replaying will not
       // be required any more. So just clear it.
       if (this.rsAccounting != null) {
-        this.rsAccounting.clearRegionReplayEditsSize(this.regionInfo.getRegionName());
+        this.rsAccounting.clearRegionReplayEditsSize(this.getRegionName());
       }
     }
     if (seqid > minSeqIdForTheRegion) {
@@ -2816,7 +2694,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     // Now delete the content of recovered edits.  We're done w/ them.
     for (Path file: files) {
-      if (!this.fs.delete(file, false)) {
+      if (!fs.delete(file, false)) {
         LOG.error("Failed delete of " + file);
       } else {
         LOG.debug("Deleted recovered.edits file=" + file);
@@ -2841,10 +2719,11 @@ public class HRegion implements HeapSize { // , Writable{
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
+    FileSystem fs = this.getFilesystem();
     status.setStatus("Opening logs");
     HLog.Reader reader = null;
     try {
-      reader = HLogFactory.createReader(this.fs, edits, conf);
+      reader = HLogFactory.createReader(fs, edits, conf);
       long currentEditSeqId = -1;
       long firstSeqIdInLog = -1;
       long skippedEdits = 0;
@@ -2909,7 +2788,7 @@ public class HRegion implements HeapSize { // , Writable{
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
             if (kv.matchingFamily(HLog.METAFAMILY) ||
-                !Bytes.equals(key.getEncodedRegionName(), this.regionInfo.getEncodedNameAsBytes())) {
+                !Bytes.equals(key.getEncodedRegionName(), this.getRegionInfo().getEncodedNameAsBytes())) {
               skippedEdits++;
               continue;
                 }
@@ -2992,7 +2871,7 @@ public class HRegion implements HeapSize { // , Writable{
   protected boolean restoreEdit(final Store s, final KeyValue kv) {
     long kvSize = s.add(kv);
     if (this.rsAccounting != null) {
-      rsAccounting.addAndGetRegionReplayEditsSize(this.regionInfo.getRegionName(), kvSize);
+      rsAccounting.addAndGetRegionReplayEditsSize(this.getRegionName(), kvSize);
     }
     return isFlushSize(this.addAndGetGlobalMemstoreSize(kvSize));
   }
@@ -3014,7 +2893,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected HStore instantiateHStore(Path tableDir, HColumnDescriptor c)
       throws IOException {
-    return new HStore(tableDir, this, c, this.fs, this.conf);
+    return new HStore(tableDir, this, c, this.getFilesystem(), this.conf);
   }
 
   /**
@@ -3063,11 +2942,11 @@ public class HRegion implements HeapSize { // , Writable{
 
   /** Make sure this is a valid row for the HRegion */
   void checkRow(final byte [] row, String op) throws IOException {
-    if(!rowIsInRange(regionInfo, row)) {
+    if (!rowIsInRange(this.getRegionInfo(), row)) {
       throw new WrongRegionException("Requested row out of range for " +
           op + " on HRegion " + this + ", startKey='" +
-          Bytes.toStringBinary(regionInfo.getStartKey()) + "', getEndKey()='" +
-          Bytes.toStringBinary(regionInfo.getEndKey()) + "', row='" +
+          Bytes.toStringBinary(getStartKey()) + "', getEndKey()='" +
+          Bytes.toStringBinary(getEndKey()) + "', row='" +
           Bytes.toStringBinary(row) + "'");
     }
   }
@@ -3351,12 +3230,12 @@ public class HRegion implements HeapSize { // , Writable{
 
   @Override
   public String toString() {
-    return this.regionInfo.getRegionNameAsString();
+    return this.getRegionInfo().getRegionNameAsString();
   }
 
   /** @return Path of region base directory */
   public Path getTableDir() {
-    return this.tableDir;
+    return fs.getTableDir();
   }
 
   /**
@@ -3384,7 +3263,7 @@ public class HRegion implements HeapSize { // , Writable{
     private HRegion region;
 
     public HRegionInfo getRegionInfo() {
-      return regionInfo;
+      return fs.getRegionInfo();
     }
     
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
@@ -3908,13 +3787,10 @@ public class HRegion implements HeapSize { // , Writable{
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
         " Table name == " + info.getTableNameAsString());
 
-    Path tableDir =
-        HTableDescriptor.getTableDir(rootDir, info.getTableName());
+    Path tableDir = HTableDescriptor.getTableDir(rootDir, info.getTableName());
     Path regionDir = HRegion.getRegionDir(tableDir, info.getEncodedName());
     FileSystem fs = FileSystem.get(conf);
-    fs.mkdirs(regionDir);
-    // Write HRI to a file in case we need to recover .META.
-    writeRegioninfoOnFilesystem(info, regionDir, fs, conf);
+    HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
     HLog effectiveHLog = hlog;
     if (hlog == null && !ignoreHLog) {
       effectiveHLog = HLogFactory.createHLog(fs, regionDir,
@@ -4094,17 +3970,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public static void deleteRegion(FileSystem fs, Path rootdir, HRegionInfo info)
   throws IOException {
-    deleteRegion(fs, HRegion.getRegionDir(rootdir, info));
-  }
-
-  private static void deleteRegion(FileSystem fs, Path regiondir)
-  throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DELETING region " + regiondir.toString());
-    }
-    if (!fs.delete(regiondir, true)) {
-      LOG.warn("Failed delete of " + regiondir);
-    }
+    HRegionFileSystem.deleteRegionFromFileSystem(null, fs, rootdir, info);
   }
 
   /**
@@ -4563,7 +4429,7 @@ public class HRegion implements HeapSize { // , Writable{
           long txid = 0;
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
-            txid = this.log.appendNoSync(this.regionInfo,
+            txid = this.log.appendNoSync(this.getRegionInfo(),
                 this.htableDescriptor.getName(), walEdit,
                 processor.getClusterId(), now, this.htableDescriptor);
           }
@@ -4793,7 +4659,7 @@ public class HRegion implements HeapSize { // , Writable{
           // Using default cluster id, as this can only happen in the orginating
           // cluster. A slave cluster receives the final value (not the delta)
           // as a Put.
-          txid = this.log.appendNoSync(regionInfo,
+          txid = this.log.appendNoSync(this.getRegionInfo(),
               this.htableDescriptor.getName(), walEdits,
               HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
               this.htableDescriptor);
@@ -4933,7 +4799,7 @@ public class HRegion implements HeapSize { // , Writable{
           // Using default cluster id, as this can only happen in the orginating
           // cluster. A slave cluster receives the final value (not the delta)
           // as a Put.
-          txid = this.log.appendNoSync(regionInfo, this.htableDescriptor.getName(),
+          txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getName(),
               walEdits, HConstants.DEFAULT_CLUSTER_ID, EnvironmentEdgeManager.currentTimeMillis(),
               this.htableDescriptor);
         }
@@ -4995,7 +4861,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      39 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      36 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (10 * Bytes.SIZEOF_LONG) +
       Bytes.SIZEOF_BOOLEAN);
 
@@ -5209,7 +5075,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public byte[] checkSplit() {
     // Can't split ROOT/META
-    if (this.regionInfo.isMetaTable()) {
+    if (this.getRegionInfo().isMetaTable()) {
       if (shouldForceSplit()) {
         LOG.warn("Cannot split root/meta regions in HBase 0.20 and above");
       }
@@ -5280,14 +5146,12 @@ public class HRegion implements HeapSize { // , Writable{
   public void startRegionOperation()
       throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
     if (this.closing.get()) {
-      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
-          " is closing");
+      throw new NotServingRegionException(getRegionNameAsString() + " is closing");
     }
     lock(lock.readLock());
     if (this.closed.get()) {
       lock.readLock().unlock();
-      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
-          " is closed");
+      throw new NotServingRegionException(getRegionNameAsString() + " is closed");
     }
   }
 
@@ -5311,16 +5175,14 @@ public class HRegion implements HeapSize { // , Writable{
   private void startBulkRegionOperation(boolean writeLockNeeded)
       throws NotServingRegionException, RegionTooBusyException, InterruptedIOException {
     if (this.closing.get()) {
-      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
-          " is closing");
+      throw new NotServingRegionException(getRegionNameAsString() + " is closing");
     }
     if (writeLockNeeded) lock(lock.writeLock());
     else lock(lock.readLock());
     if (this.closed.get()) {
       if (writeLockNeeded) lock.writeLock().unlock();
       else lock.readLock().unlock();
-      throw new NotServingRegionException(regionInfo.getRegionNameAsString() +
-          " is closed");
+      throw new NotServingRegionException(getRegionNameAsString() + " is closed");
     }
   }
 
@@ -5388,7 +5250,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException If anything goes wrong with DFS
    */
   private void syncOrDefer(long txid) throws IOException {
-    if (this.regionInfo.isMetaRegion() ||
+    if (this.getRegionInfo().isMetaRegion() ||
       !this.htableDescriptor.isDeferredLogFlush()) {
       this.log.sync(txid);
     }

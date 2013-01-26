@@ -530,7 +530,7 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   @Override
-  public void assertBulkLoadHFileOk(Path srcPath) throws IOException {
+  public void assertBulkLoadHFileOk(final Path srcPath) throws IOException {
     HFile.Reader reader  = null;
     try {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "

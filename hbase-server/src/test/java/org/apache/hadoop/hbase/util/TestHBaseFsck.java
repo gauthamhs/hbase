@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
@@ -269,7 +270,7 @@ public class TestHBaseFsck {
           Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
           FileSystem fs = rootDir.getFileSystem(conf);
           Path p = new Path(rootDir + "/" + htd.getNameAsString(), hri.getEncodedName());
-          Path hriPath = new Path(p, HRegion.REGIONINFO_FILE);
+          Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
         }
 

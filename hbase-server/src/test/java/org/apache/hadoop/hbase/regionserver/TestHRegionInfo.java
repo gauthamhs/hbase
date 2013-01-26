@@ -75,7 +75,7 @@ public class TestHRegionInfo {
 
   long getModTime(final HRegion r) throws IOException {
     FileStatus [] statuses =
-      r.getFilesystem().listStatus(new Path(r.getRegionDir(), HRegion.REGIONINFO_FILE));
+      r.getFilesystem().listStatus(new Path(r.getRegionDir(), HRegionFileSystem.REGION_INFO_FILE));
     assertTrue(statuses != null && statuses.length == 1);
     return statuses[0].getModificationTime();
   }

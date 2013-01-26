@@ -197,7 +197,7 @@ public class CompactionTool extends Configured implements Tool {
   }
 
   private static boolean isRegionDir(final FileSystem fs, final Path path) throws IOException {
-    Path regionInfo = new Path(path, HRegion.REGIONINFO_FILE);
+    Path regionInfo = new Path(path, HRegionFileSystem.REGION_INFO_FILE);
     return fs.exists(regionInfo);
   }
 
