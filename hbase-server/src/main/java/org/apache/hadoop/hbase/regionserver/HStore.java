@@ -40,9 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,7 +51,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -268,22 +265,6 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public String getTableName() {
     return this.region.getTableDesc().getNameAsString();
-  }
-
-  /**
-   * Create this store's homedir
-   * @param fs
-   * @param homedir
-   * @return Return <code>homedir</code>
-   * @throws IOException
-   */
-  Path createStoreHomeDir(final FileSystem fs,
-      final Path homedir) throws IOException {
-    if (!fs.exists(homedir)) {
-      if (!fs.mkdirs(homedir))
-        throw new IOException("Failed create of: " + homedir.toString());
-    }
-    return homedir;
   }
 
   FileSystem getFileSystem() {
@@ -576,32 +557,9 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public void bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
     Path srcPath = new Path(srcPathStr);
+    Path dstPath = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
 
-    FileSystem fs = this.getFileSystem();
-
-    // Copy the file if it's on another filesystem
-    FileSystem srcFs = srcPath.getFileSystem(conf);
-    FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
-    //We can't compare FileSystem instances as
-    //equals() includes UGI instance as part of the comparison
-    //and won't work when doing SecureBulkLoad
-    //TODO deal with viewFS
-    if (!srcFs.getUri().equals(desFs.getUri())) {
-      LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
-          "the destination store. Copying file over to destination filesystem.");
-      Path tmpPath = getTmpPath();
-      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
-      LOG.info("Copied " + srcPath
-          + " to temporary path on destination filesystem: " + tmpPath);
-      srcPath = tmpPath;
-    }
-
-    Path dstPath = StoreFile.getRandomFilename(fs, homedir,
-        (seqNum == -1) ? null : "_SeqId_" + seqNum + "_");
-    LOG.debug("Renaming bulk load file " + srcPath + " to " + dstPath);
-    StoreFile.rename(fs, srcPath, dstPath);
-
-    StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
+    StoreFile sf = new StoreFile(this.getFileSystem(), dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.dataBlockEncoder);
 
     StoreFile.Reader r = sf.createReader();
@@ -628,15 +586,6 @@ public class HStore implements Store, StoreConfiguration {
     notifyChangedReadersObservers();
     LOG.info("Successfully loaded store file " + srcPath
         + " into store " + this + " (new location: " + dstPath + ")");
-  }
-
-  /**
-   * Get a temporary path in this region. These temporary files
-   * will get cleaned up when the region is re-opened if they are
-   * still around.
-   */
-  private Path getTmpPath() throws IOException {
-    return StoreFile.getRandomFilename(this.getFileSystem(), region.getTmpDir());
   }
 
   @Override

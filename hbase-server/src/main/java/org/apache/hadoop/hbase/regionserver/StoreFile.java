@@ -875,23 +875,7 @@ public class StoreFile {
    */
   static Path getRandomFilename(final FileSystem fs, final Path dir)
       throws IOException {
-    return getRandomFilename(fs, dir, null);
-  }
-
-  /**
-   *
-   * @param fs
-   * @param dir
-   * @param suffix
-   * @return Path to a file that doesn't exist at time of this invocation.
-   * @throws IOException
-   */
-  static Path getRandomFilename(final FileSystem fs,
-                                final Path dir,
-                                final String suffix)
-      throws IOException {
-    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", "")
-        + (suffix == null ? "" : suffix));
+    return new Path(dir, UUID.randomUUID().toString().replaceAll("-", ""));
   }
 
   /**

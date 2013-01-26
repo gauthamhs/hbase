@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,10 +34,12 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -111,6 +114,57 @@ public class HRegionFileSystem {
 
   public void cleanupSplitsDir() throws IOException {
     FSUtils.deleteDirectory(fs, getSplitsDir());
+  }
+
+  public Path createTempName() {
+    return createTempName(null);
+  }
+
+  public Path createTempName(final String suffix) {
+    return new Path(getTempDir(), generateRandomName(suffix));
+  }
+
+  private String generateRandomName(final String suffix) {
+    String name = UUID.randomUUID().toString().replaceAll("-", "");
+    if (suffix != null) name += suffix;
+    return name;
+  }
+
+  public Path commitStoreFile(final String familyName, final Path buildPath) throws IOException {
+    return commitStoreFile(familyName, buildPath, -1);
+  }
+
+  public Path commitStoreFile(final String familyName, final Path buildPath, final long seqNum)
+      throws IOException {
+    String name = generateRandomName((seqNum == -1) ? null : "_SeqId_" + seqNum + "_");
+    Path dstPath = new Path(getRegionDir(), familyName);
+    if (!fs.exists(buildPath)) {
+      throw new FileNotFoundException(buildPath.toString());
+    }
+    LOG.debug("Sommitting store file " + buildPath + " as " + dstPath);
+    if (!fs.rename(buildPath, dstPath)) {
+      throw new IOException("Failed rename of " + buildPath + " to " + dstPath);
+    }
+    return dstPath;
+  }
+
+  public Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+      throws IOException {
+    // Copy the file if it's on another filesystem
+    FileSystem srcFs = srcPath.getFileSystem(conf);
+    FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
+    // We can't compare FileSystem instances as equals() includes UGI instance
+    // as part of the comparison and won't work when doing SecureBulkLoad
+    // TODO deal with viewFS
+    if (!srcFs.getUri().equals(desFs.getUri())) {
+      LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
+          "the destination store. Copying file over to destination filesystem.");
+      Path tmpPath = createTempName();
+      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
+      LOG.info("Copied " + srcPath + " to temporary path on destination filesystem: " + tmpPath);
+      srcPath = tmpPath;
+    }
+    return commitStoreFile(familyName, srcPath, seqNum);
   }
 
   public static class StoreFileInfo {
@@ -235,7 +289,7 @@ public class HRegionFileSystem {
    * then we fast exit.
    * @throws IOException
    */
-  /* TODO */public void checkRegionInfoOnFilesystem() throws IOException {
+  void checkRegionInfoOnFilesystem() throws IOException {
     // Compose the content of the file so we can compare to length in filesystem. If not same,
     // rewrite it (it may have been written in the old format using Writables instead of pb). The
     // pb version is much shorter -- we write now w/o the toString version -- so checking length
