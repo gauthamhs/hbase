@@ -118,8 +118,8 @@ class FSHLog implements HLog, Syncable {
   private final long optionalFlushInterval;
   private final long blocksize;
   private final String prefix;
-  private final AtomicLong unflushedEntries = new AtomicLong(0);
-  private volatile long syncedTillHere = 0;
+  /** tracking information about what has been synced */
+  private SyncInfo syncInfo = new SyncInfo();
   private long lastDeferredTxid;
   private final Path oldLogDir;
   private volatile boolean logRollRunning;
@@ -207,7 +207,6 @@ class FSHLog implements HLog, Syncable {
   // during an update
   // locked during appends
   private final Object updateLock = new Object();
-  private final Object flushLock = new Object();
 
   private final boolean enabled;
 
@@ -228,6 +227,8 @@ class FSHLog implements HLog, Syncable {
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
   private final MetricsWAL metrics;
+
+  private static AtomicLong syncBatchSize = new AtomicLong();
 
   /**
    * Constructor.
@@ -681,15 +682,7 @@ class FSHLog implements HLog, Syncable {
     if (this.writer != null) {
       // Close the current writer, get a new one.
       try {
-        // Wait till all current transactions are written to the hlog.
-        // No new transactions can occur because we have the updatelock.
-        if (this.unflushedEntries.get() != this.syncedTillHere) {
-          LOG.debug("cleanupCurrentWriter " +
-                   " waiting for transactions to get synced " +
-                   " total " + this.unflushedEntries.get() +
-                   " synced till here " + syncedTillHere);
-          sync();
-        }
+        sync();
         this.writer.close();
         this.writer = null;
         closeErrorCount.set(0);
@@ -861,9 +854,9 @@ class FSHLog implements HLog, Syncable {
     if (this.closed) {
       throw new IOException("Cannot append; log is closed");
     }
-    long txid = 0;
+    long seqNum;
     synchronized (updateLock) {
-      long seqNum = obtainSeqNum();
+      seqNum = obtainSeqNum();
       logKey.setLogSeqNum(seqNum);
       // The 'lastSeqWritten' map holds the sequence number of the oldest
       // write for each region (i.e. the first edit added to the particular
@@ -873,10 +866,9 @@ class FSHLog implements HLog, Syncable {
       this.oldestUnflushedSeqNums.putIfAbsent(regionInfo.getEncodedNameAsBytes(),
         Long.valueOf(seqNum));
       doWrite(regionInfo, logKey, logEdit, htd);
-      txid = this.unflushedEntries.incrementAndGet();
       this.numEntries.incrementAndGet();
       if (htd.isDeferredLogFlush()) {
-        lastDeferredTxid = txid;
+        lastDeferredTxid = seqNum;
       }
     }
 
@@ -886,9 +878,9 @@ class FSHLog implements HLog, Syncable {
         (regionInfo.isMetaRegion() ||
         !htd.isDeferredLogFlush())) {
       // sync txn to file system
-      this.sync(txid);
+      this.sync(seqNum);
     }
-    return txid;
+    return seqNum;
   }
 
   @Override
@@ -921,19 +913,19 @@ class FSHLog implements HLog, Syncable {
    * @param clusterId The originating clusterId for this edit (for replication)
    * @param now
    * @param doSync shall we sync?
-   * @return txid of this transaction
+   * @return seqNum of this transaction
    * @throws IOException
    */
   private long append(HRegionInfo info, byte [] tableName, WALEdit edits, UUID clusterId,
       final long now, HTableDescriptor htd, boolean doSync)
     throws IOException {
-      if (edits.isEmpty()) return this.unflushedEntries.get();;
+      if (edits.isEmpty()) return this.logSeqNum.get();;
       if (this.closed) {
         throw new IOException("Cannot append; log is closed");
       }
-      long txid = 0;
+      long seqNum;
       synchronized (this.updateLock) {
-        long seqNum = obtainSeqNum();
+        seqNum = obtainSeqNum();
         // The 'lastSeqWritten' map holds the sequence number of the oldest
         // write for each region (i.e. the first edit added to the particular
         // memstore). . When the cache is flushed, the entry for the
@@ -946,9 +938,8 @@ class FSHLog implements HLog, Syncable {
         HLogKey logKey = makeKey(encodedRegionName, tableName, seqNum, now, clusterId);
         doWrite(info, logKey, edits, htd);
         this.numEntries.incrementAndGet();
-        txid = this.unflushedEntries.incrementAndGet();
         if (htd.isDeferredLogFlush()) {
-          lastDeferredTxid = txid;
+          lastDeferredTxid = seqNum;
         }
       }
       // Sync if catalog region, and if not then check if that table supports
@@ -957,9 +948,9 @@ class FSHLog implements HLog, Syncable {
           (info.isMetaRegion() ||
           !htd.isDeferredLogFlush())) {
         // sync txn to file system
-        this.sync(txid);
+        this.sync(seqNum);
       }
-      return txid;
+      return seqNum;
     }
 
   @Override
@@ -997,6 +988,9 @@ class FSHLog implements HLog, Syncable {
     // goal is to increase the batchsize for writing-to-hdfs as well as
     // sync-to-hdfs, so that we can get better system throughput.
     private List<Entry> pendingWrites = new LinkedList<Entry>();
+    private Object flushLock = new Object();
+    long lastSeqAppended = -1;
+    long lastSeqFlushed = -1;
 
     LogSyncer(long optionalFlushInterval) {
       this.optionalFlushInterval = optionalFlushInterval;
@@ -1010,7 +1004,7 @@ class FSHLog implements HLog, Syncable {
         while(!this.isInterrupted() && !closeLogSyncer.get()) {
 
           try {
-            if (unflushedEntries.get() <= syncedTillHere) {
+            if (syncInfo.getLastSyncedTxId() >= logSeqNum.get()) {
               synchronized (closeLogSyncer) {
                 closeLogSyncer.wait(this.optionalFlushInterval);
               }
@@ -1035,24 +1029,43 @@ class FSHLog implements HLog, Syncable {
     // our own queue rather than writing it to the HDFS output stream because
     // HDFSOutputStream.writeChunk is not lightweight at all.
     synchronized void append(Entry e) throws IOException {
+      long seq = e.getKey().getLogSeqNum();
+      assert seq > lastSeqAppended;
+      lastSeqAppended = seq;
       pendingWrites.add(e);
     }
 
     // Returns all currently pending writes. New writes
     // will accumulate in a new list.
-    synchronized List<Entry> getPendingWrites() {
-      List<Entry> save = this.pendingWrites;
-      this.pendingWrites = new LinkedList<Entry>();
-      return save;
-    }
-
-    // writes out pending entries to the HLog
-    void hlogFlush(Writer writer, List<Entry> pending) throws IOException {
-      if (pending == null) return;
-
-      // write out all accumulated Entries to hdfs.
-      for (Entry e : pending) {
-        writer.append(e);
+    long flushWritesTo(Writer writer) throws IOException {
+      synchronized (flushLock) {
+        List<Entry> pending;
+        synchronized (this) {
+          pending = pendingWrites;
+          pendingWrites = new LinkedList<Entry>();
+        }
+        boolean success = false;
+        try {
+          int numFlushed = 0;
+          for (Entry e : pending) {
+            writer.append(e);
+            long seq = e.getKey().getLogSeqNum();
+            assert seq > lastSeqFlushed;
+            lastSeqFlushed = seq;
+            numFlushed++;
+          }
+          syncBatchSize.addAndGet(numFlushed);
+          success = true;
+        } finally {
+          if (!success) {
+            // push back our batch into the pending list
+            synchronized (this) {
+              pending.addAll(pendingWrites);
+              pendingWrites = pending;
+            }
+          }
+        }
+        return lastSeqFlushed;
       }
     }
 
@@ -1064,9 +1077,24 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
+  private static class SyncInfo {
+    private long syncedTillHere = 0;
+
+    synchronized long getLastSyncedTxId() {
+      return syncedTillHere;
+    }
+
+    synchronized void notifySynced(long txid) {
+      if (txid > syncedTillHere) {
+        syncedTillHere = txid;
+      }
+      notifyAll();
+    }
+  }
+
   // sync all known transactions
   private void syncer() throws IOException {
-    syncer(this.unflushedEntries.get()); // sync all pending items
+    syncer(this.logSeqNum.get()); // sync all pending
   }
 
   // sync all transactions upto the specified txid
@@ -1082,45 +1110,14 @@ class FSHLog implements HLog, Syncable {
     }
     // if the transaction that we are interested in is already 
     // synced, then return immediately.
-    if (txid <= this.syncedTillHere) {
+    if (syncInfo.getLastSyncedTxId() >= txid) {
       return;
     }
     try {
-      long doneUpto;
-      long now = EnvironmentEdgeManager.currentTimeMillis();
-      // First flush all the pending writes to HDFS. Then 
-      // issue the sync to HDFS. If sync is successful, then update
-      // syncedTillHere to indicate that transactions till this
-      // number has been successfully synced.
-      IOException ioe = null;
-      List<Entry> pending = null;
-      synchronized (flushLock) {
-        if (txid <= this.syncedTillHere) {
-          return;
-        }
-        doneUpto = this.unflushedEntries.get();
-        pending = logSyncer.getPendingWrites();
-        try {
-          logSyncer.hlogFlush(tempWriter, pending);
-        } catch(IOException io) {
-          ioe = io;
-          LOG.error("syncer encountered error, will retry. txid=" + txid, ioe);
-        }
-      }
-      if (ioe != null && pending != null) {
-        synchronized (this.updateLock) {
-          synchronized (flushLock) {
-            // HBASE-4387, HBASE-5623, retry with updateLock held
-            tempWriter = this.writer;
-            logSyncer.hlogFlush(tempWriter, pending);
-          }
-        }          
-      }
-      // another thread might have sync'ed avoid double-sync'ing
-      if (txid <= this.syncedTillHere) {
-        return;
-      }
+      long now = System.currentTimeMillis();
+      long flushedSeqId;
       try {
+        flushedSeqId = logSyncer.flushWritesTo(tempWriter);
         if (tempWriter != null) tempWriter.sync();
       } catch(IOException ex) {
         synchronized (this.updateLock) {
@@ -1128,11 +1125,13 @@ class FSHLog implements HLog, Syncable {
           // TODO: we don't actually need to do it for concurrent close - what is the point
           //       of syncing new unrelated writer? Keep behavior for now.
           tempWriter = this.writer;
+          flushedSeqId = logSyncer.flushWritesTo(tempWriter);
           if (tempWriter != null) tempWriter.sync();
         }
       }
-      this.syncedTillHere = Math.max(this.syncedTillHere, doneUpto);
-
+      syncInfo.notifySynced(flushedSeqId);
+      // We try to not acquire the updateLock just to update statistics.
+      // Make these statistics as AtomicLong.
       this.metrics.finishSync(EnvironmentEdgeManager.currentTimeMillis() - now);
       // TODO: preserving the old behavior for now, but this check is strange. It's not
       //       protected by any locks here, so for all we know rolling locks might start
@@ -1299,6 +1298,10 @@ class FSHLog implements HLog, Syncable {
     return outputfiles.size();
   }
 
+  public static long getSyncBatchSize() {
+    return syncBatchSize.getAndSet(0);
+  }
+
   @Override
   public Long startCacheFlush(final byte[] encodedRegionName) {
     Long oldRegionSeqNum = null;
@@ -1415,7 +1418,7 @@ class FSHLog implements HLog, Syncable {
 
   /** Provide access to currently deferred sequence num for tests */
   boolean hasDeferredEntries() {
-    return lastDeferredTxid > syncedTillHere;
+    return lastDeferredTxid > syncInfo.getLastSyncedTxId();
   }
 
   @Override
