@@ -1037,15 +1037,23 @@ class FSHLog implements HLog, Syncable {
 
     // Returns all currently pending writes. New writes
     // will accumulate in a new list.
+    synchronized List<Entry> getPendingWrites() {
+      List<Entry> save = this.pendingWrites;
+      this.pendingWrites = new LinkedList<Entry>();
+      return save;
+    }
+
+    synchronized void rollbackPendingWrites(List<Entry> pending) {
+      pending.addAll(this.pendingWrites);
+      this.pendingWrites = pending;
+    }
+
     long flushWritesTo(Writer writer) throws IOException {
       synchronized (flushLock) {
-        List<Entry> pending;
-        synchronized (this) {
-          pending = pendingWrites;
-          pendingWrites = new LinkedList<Entry>();
-        }
+        List<Entry> pending = logSyncer.getPendingWrites();
         boolean success = false;
         try {
+          // write out all accumulated Entries to hdfs.
           int numFlushed = 0;
           for (Entry e : pending) {
             writer.append(e);
@@ -1058,11 +1066,7 @@ class FSHLog implements HLog, Syncable {
           success = true;
         } finally {
           if (!success) {
-            // push back our batch into the pending list
-            synchronized (this) {
-              pending.addAll(pendingWrites);
-              pendingWrites = pending;
-            }
+            rollbackPendingWrites(pending);
           }
         }
         return lastSeqFlushed;
@@ -1108,13 +1112,13 @@ class FSHLog implements HLog, Syncable {
       // See HBASE-4387, HBASE-5623, HBASE-7329.
       tempWriter = this.writer;
     }
-    // if the transaction that we are interested in is already 
+    // if the transaction that we are interested in is already
     // synced, then return immediately.
     if (syncInfo.getLastSyncedTxId() >= txid) {
       return;
     }
     try {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTimeMillis();
       long flushedSeqId;
       try {
         flushedSeqId = logSyncer.flushWritesTo(tempWriter);
