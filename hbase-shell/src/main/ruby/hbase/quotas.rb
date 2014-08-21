@@ -28,6 +28,7 @@ java_import org.apache.hadoop.hbase.quotas.QuotaSettingsFactory
 module HBaseQuotasConstants
   GLOBAL_BYPASS = 'GLOBAL_BYPASS'
   THROTTLE_TYPE = 'THROTTLE_TYPE'
+  TABLE_NUMBER = 'TABLE_NUMBER'
   THROTTLE = 'THROTTLE'
   REQUEST = 'REQUEST'
 end
@@ -112,6 +113,29 @@ module Hbase
       else
         raise "Expected USER"
       end
+      @admin.setQuota(settings)
+    end
+
+    def set_max_tables(args)
+      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
+
+      limit = args.delete(LIMIT)
+      if limit.eql? NONE
+        limit = 0x7fffffff
+      end
+
+      if args.has_key?(USER)
+        user = args.delete(USER)
+        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        settings = QuotaSettingsFactory.userMaxTables(user, limit)
+      elsif args.has_key?(NAMESPACE)
+        namespace = args.delete(NAMESPACE)
+        raise(ArgumentError, "Unexpected arguments: " + args.inspect) unless args.empty?
+        settings = QuotaSettingsFactory.namespaceMaxTables(namespace, limit)
+      else
+        raise "Expected USER or NAMESPACE"
+      end
+
       @admin.setQuota(settings)
     end
 

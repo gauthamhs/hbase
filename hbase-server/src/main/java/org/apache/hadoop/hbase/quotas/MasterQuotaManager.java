@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,11 +38,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleRequest;
@@ -48,6 +52,8 @@ import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleType;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaScope;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeUnit;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Master Quota Manager.
@@ -90,6 +96,10 @@ public class MasterQuotaManager {
     namespaceLocks = new NamedLock<String>();
     tableLocks = new NamedLock<TableName>();
     userLocks = new NamedLock<String>();
+
+    LOG.debug("Initializing quota master coprocessor");
+    masterServices.getMasterCoprocessorHost().load(MasterQuotaObserver.class,
+      Coprocessor.PRIORITY_SYSTEM, masterServices.getConfiguration());
 
     enabled = true;
   }
@@ -293,6 +303,7 @@ public class MasterQuotaManager {
     Quotas.Builder builder = (quotas != null) ? quotas.toBuilder() : Quotas.newBuilder();
     if (req.hasThrottle()) applyThrottle(builder, req.getThrottle());
     if (req.hasBypassGlobals()) applyBypassGlobals(builder, req.getBypassGlobals());
+    if (req.hasMaxTables()) applyMaxTables(builder, req.getMaxTables());
 
     // Submit new changes
     quotas = builder.build();
@@ -384,10 +395,128 @@ public class MasterQuotaManager {
     }
   }
 
+  private void applyMaxTables(final Quotas.Builder quotas, int maxTables) {
+    if (maxTables >= 0 && maxTables < Integer.MAX_VALUE) {
+      quotas.setMaxTables(maxTables);
+    } else {
+      quotas.clearMaxTables();
+    }
+  }
+
   private void validateTimedQuota(final TimedQuota timedQuota) throws IOException {
     if (timedQuota.getSoftLimit() < 1) {
       throw new DoNotRetryIOException(new UnsupportedOperationException(
           "The throttle limit must be greater then 0, got " + timedQuota.getSoftLimit()));
+    }
+  }
+
+  /* ==========================================================================
+   *  Master Coprocessor
+   */
+  public static class MasterQuotaObserver extends BaseMasterObserver {
+    public MasterQuotaObserver() {
+    }
+
+    @Override
+    public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      MasterServices services = ctx.getEnvironment().getMasterServices();
+      if (!services.isInitialized() || desc.getTableName().isSystemTable()) return;
+
+      Configuration conf = services.getConfiguration();
+      Set<TableName> tables = services.getTableStateManager().getTables();
+      String namespace = desc.getTableName().getNamespaceAsString();
+
+      // Verify namespace "maxTables" quota
+      // TODO-MAYBE: This can be cached, but since create is rare enough we can avoid that
+      Quotas quota = QuotaUtil.getNamespaceQuota(conf, namespace);
+      if (quota != null && quota.hasMaxTables()) {
+        int ntables = countNamespaceTables(tables, namespace);
+        if ((ntables + 1) > quota.getMaxTables()) {
+          throw new QuotaExceededException("The table " + desc.getTableName().getNameAsString()
+              + "cannot be created as it would exceed maximum number of tables allowed "
+              + " in the namespace .");
+        }
+      }
+
+      // Verify user "maxTables" quota
+      String userName = getTableCreator(services, desc);
+      if (userName != null) {
+        try {
+          services.getMasterQuotaManager().userLocks.lock(userName);
+          try {
+            quota = QuotaUtil.getUserQuota(conf, userName);
+            if (quota != null && quota.hasMaxTables()) {
+              QuotaUsage usage = QuotaUtil.getUserQuotaUsage(conf, userName);
+              if ((usage.getTablesCreated() + 1) > quota.getMaxTables()) {
+                throw new QuotaExceededException("The table " + desc.getTableName().getNameAsString()
+                    + "cannot be created as it would exceed maximum number of tables allowed "
+                    + " for the user.");
+              }
+
+              // TODO: This should be in postCreate.. but...
+              usage = incTableCreated(usage, 1);
+              QuotaUtil.addUserQuotaUsage(conf, userName, usage);
+            }
+          } finally {
+            services.getMasterQuotaManager().userLocks.unlock(userName);
+          }
+        } catch (InterruptedException e) {
+          IOException iie = new InterruptedIOException();
+          iie.initCause(e);
+          throw iie;
+        }
+      }
+    }
+
+    @Override
+    public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName) throws IOException {
+      MasterServices services = ctx.getEnvironment().getMasterServices();
+      Configuration conf = services.getConfiguration();
+      String userName = getTableCreator(services, tableName);
+      if (userName != null) {
+        try {
+        services.getMasterQuotaManager().userLocks.lock(userName);
+          try {
+            QuotaUsage usage = QuotaUtil.getUserQuotaUsage(conf, userName);
+            usage = incTableCreated(usage, -1);
+            QuotaUtil.addUserQuotaUsage(conf, userName, usage);
+          } finally {
+            services.getMasterQuotaManager().userLocks.unlock(userName);
+          }
+        } catch (InterruptedException e) {
+          IOException iie = new InterruptedIOException();
+          iie.initCause(e);
+          throw iie;
+        }
+      }
+    }
+
+    private static int countNamespaceTables(final Set<TableName> tables, final String namespace) {
+      int count = 0;
+      for (TableName table: tables) {
+        if (namespace.equals(table.getNamespaceAsString())) {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    private String getTableCreator(MasterServices services, HTableDescriptor htd) throws IOException {
+      // TODO: Replace with HBASE-11996
+      return htd.getOwnerString();
+    }
+
+    private String getTableCreator(MasterServices services, TableName table) throws IOException {
+      // TODO: Replace with HBASE-11996
+      return services.getTableDescriptors().get(table).getOwnerString();
+    }
+
+    private QuotaUsage incTableCreated(QuotaUsage usage, int inc) {
+      QuotaUsage.Builder builder = usage != null ? usage.toBuilder() : QuotaUsage.newBuilder();
+      builder.setTablesCreated(Math.max(0, builder.getTablesCreated() + inc));
+      return builder.build();
     }
   }
 

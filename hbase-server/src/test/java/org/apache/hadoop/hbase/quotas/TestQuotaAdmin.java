@@ -79,14 +79,17 @@ public class TestQuotaAdmin {
   public void testSimpleScan() throws Exception {
     Admin admin = TEST_UTIL.getHBaseAdmin();
     String userName = User.getCurrent().getShortName();
+    String namespace = "NS0";
 
     admin.setQuota(QuotaSettingsFactory
       .throttleUser(userName, ThrottleType.REQUEST_NUMBER, 6, TimeUnit.MINUTES));
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
+    admin.setQuota(QuotaSettingsFactory.namespaceMaxTables(namespace, 10));
 
     QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
     try {
       int countThrottle = 0;
+      int countTableNumber = 0;
       int countGlobalBypass = 0;
       for (QuotaSettings settings: scanner) {
         LOG.debug(settings);
@@ -103,19 +106,25 @@ public class TestQuotaAdmin {
           case GLOBAL_BYPASS:
             countGlobalBypass++;
             break;
+          case TABLE_NUMBER:
+            countTableNumber++;
+            break;
           default:
             fail("unexpected settings type: " + settings.getQuotaType());
         }
       }
       assertEquals(1, countThrottle);
+      assertEquals(1, countTableNumber);
       assertEquals(1, countGlobalBypass);
     } finally {
       scanner.close();
     }
 
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
-    assertNumResults(1, null);
+    assertNumResults(2, null);
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, false));
+    assertNumResults(1, null);
+    admin.setQuota(QuotaSettingsFactory.namespaceMaxTables(namespace, Integer.MAX_VALUE));
     assertNumResults(0, null);
   }
 

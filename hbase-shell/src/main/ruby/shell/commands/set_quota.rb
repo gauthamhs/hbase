@@ -32,6 +32,9 @@ with (B, K, M, G, T, P) as valid size unit and (sec, min, hour, day) as valid ti
 Currently the throttle limit is per machine - a limit of 100req/min
 means that each machine can execute 100req/min.
 
+TYPE => TABLE_NUMBER
+The maximum number of tables allowed for a particular user or a namespace.
+
 For example:
 
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
@@ -41,7 +44,11 @@ For example:
     hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/sec'
     hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10M/sec'
     hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
+
     hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true
+
+    hbase> set_quota TYPE => TABLE_NUMBER, USER => 'u1', LIMIT => 10
+    hbase> set_quota TYPE => TABLE_NUMBER, NAMESPACE => 'ns1', LIMIT => 20
 EOF
       end
 
@@ -56,6 +63,8 @@ EOF
               else
                 quotas_admin.throttle(args)
               end
+            when TABLE_NUMBER
+              quotas_admin.set_max_tables(args)
           else
             raise "Invalid TYPE argument. got " + qtype
           end

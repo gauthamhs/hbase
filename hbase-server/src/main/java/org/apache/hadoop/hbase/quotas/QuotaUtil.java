@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -261,6 +262,21 @@ public class QuotaUtil extends QuotaTableUtil {
 
   private static interface KeyFromRow<T> {
     T getKeyFromRow(final byte[] row);
+  }
+
+  /* =========================================================================
+   *  Quota "usage" helpers
+   */
+  public static void addUserQuotaUsage(final Configuration conf, final String user,
+      final QuotaUsage data) throws IOException {
+    addQuotaUsage(conf, getUserRowKey(user), QUOTA_QUALIFIER_USAGE, data);
+  }
+
+  private static void addQuotaUsage(final Configuration conf, final byte[] rowKey,
+      final byte[] qualifier, final QuotaUsage data) throws IOException {
+    Put put = new Put(rowKey);
+    put.add(QUOTA_FAMILY_USAGE, qualifier, quotaUsageToData(data));
+    doPut(conf, put);
   }
 
   /* =========================================================================

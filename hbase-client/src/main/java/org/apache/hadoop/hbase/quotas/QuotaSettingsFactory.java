@@ -91,6 +91,9 @@ public class QuotaSettingsFactory {
     if (quotas.getBypassGlobals() == true) {
       settings.add(new QuotaGlobalsSettingsBypass(userName, tableName, namespace, true));
     }
+    if (quotas.hasMaxTables()) {
+      settings.add(new TableNumberSettings(userName, namespace, quotas.getMaxTables()));
+    }
     return settings;
   }
 
@@ -263,5 +266,31 @@ public class QuotaSettingsFactory {
    */
   public static QuotaSettings bypassGlobals(final String userName, final boolean bypassGlobals) {
     return new QuotaGlobalsSettingsBypass(userName, null, null, bypassGlobals);
+  }
+
+  /* ==========================================================================
+   *  Table Number Settings
+   */
+
+  /**
+   * Set the "max table" for the specified user
+   *
+   * @param userName the user to limit
+   * @param maxTables the maximum number of tables allowed for the user
+   * @return the quota settings
+   */
+  public static QuotaSettings userMaxTables(final String userName, final int maxTables) {
+    return new TableNumberSettings(userName, null, maxTables);
+  }
+
+  /**
+   * Set the "max table" for the specified namespace
+   *
+   * @param namespace the namespace to limit
+   * @param maxTables the maximum number of tables allowed in the namespace
+   * @return the quota settings
+   */
+  public static QuotaSettings namespaceMaxTables(final String namespace, final int maxTables) {
+    return new TableNumberSettings(null, namespace, maxTables);
   }
 }

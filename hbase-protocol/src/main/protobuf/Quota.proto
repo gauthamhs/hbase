@@ -66,8 +66,15 @@ enum QuotaType {
 
 message Quotas {
   optional bool bypass_globals = 1 [default = false];
+
+  // Throttle
   optional Throttle throttle = 2;
+
+  // "Objects" Limits
+  optional uint32 max_tables = 3;
 }
 
 message QuotaUsage {
+  // "Objects" Usage
+  optional uint32 tables_created = 1 [default = 0];
 }

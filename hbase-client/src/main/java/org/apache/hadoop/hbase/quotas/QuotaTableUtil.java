@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 
@@ -69,6 +70,7 @@ public class QuotaTableUtil {
 
   protected static final byte[] QUOTA_FAMILY_INFO = Bytes.toBytes("q");
   protected static final byte[] QUOTA_FAMILY_USAGE = Bytes.toBytes("u");
+  protected static final byte[] QUOTA_QUALIFIER_USAGE = Bytes.toBytes("u");
   protected static final byte[] QUOTA_QUALIFIER_SETTINGS = Bytes.toBytes("s");
   protected static final byte[] QUOTA_QUALIFIER_SETTINGS_PREFIX = Bytes.toBytes("s.");
   protected static final byte[] QUOTA_USER_ROW_KEY_PREFIX = Bytes.toBytes("u.");
@@ -294,6 +296,25 @@ public class QuotaTableUtil {
   }
 
   /* =========================================================================
+   *  Quota "usage" helpers
+   */
+  public static QuotaUsage getUserQuotaUsage(final Configuration conf, final String user)
+      throws IOException {
+    return getQuotaUsage(conf, getUserRowKey(user), QUOTA_QUALIFIER_USAGE);
+  }
+
+  private static QuotaUsage getQuotaUsage(final Configuration conf, final byte[] rowKey,
+      final byte[] qualifier) throws IOException {
+    Get get = new Get(rowKey);
+    get.addColumn(QUOTA_FAMILY_USAGE, qualifier);
+    Result result = doGet(conf, get);
+    if (result.isEmpty()) {
+      return null;
+    }
+    return quotaUsageFromData(result.getValue(QUOTA_FAMILY_USAGE, qualifier));
+  }
+
+  /* =========================================================================
    *  Quotas protobuf helpers
    */
   protected static Quotas quotasFromData(final byte[] data) throws IOException {
@@ -315,7 +336,23 @@ public class QuotaTableUtil {
     boolean hasSettings = false;
     hasSettings |= quotas.hasThrottle();
     hasSettings |= quotas.hasBypassGlobals();
+    hasSettings |= quotas.hasMaxTables();
     return !hasSettings;
+  }
+
+  protected static QuotaUsage quotaUsageFromData(final byte[] data) throws IOException {
+    int magicLen = ProtobufUtil.lengthOfPBMagic();
+    if (!ProtobufUtil.isPBMagicPrefix(data, 0, magicLen)) {
+      throw new IOException("Missing pb magic prefix");
+    }
+    return QuotaUsage.parseFrom(new ByteArrayInputStream(data, magicLen, data.length - magicLen));
+  }
+
+  protected static byte[] quotaUsageToData(final QuotaUsage data) throws IOException {
+    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    stream.write(ProtobufUtil.PB_MAGIC);
+    data.writeTo(stream);
+    return stream.toByteArray();
   }
 
   /* =========================================================================

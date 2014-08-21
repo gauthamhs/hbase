@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,16 +18,37 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 
-/**
- * Describe the Quota Type.
- */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
-public enum QuotaType {
-  THROTTLE,
-  GLOBAL_BYPASS,
-  TABLE_NUMBER,
+class TableNumberSettings extends QuotaSettings {
+  private final int maxTables;
+
+  TableNumberSettings(final String userName, final String namespace,
+      final int maxTables) {
+    super(userName, null, namespace);
+    this.maxTables = maxTables;
+  }
+
+  public int getMaxTables() {
+    return maxTables;
+  }
+
+  @Override
+  public QuotaType getQuotaType() {
+    return QuotaType.TABLE_NUMBER;
+  }
+
+  @Override
+  protected void setupSetQuotaRequest(SetQuotaRequest.Builder builder) {
+    builder.setMaxTables(maxTables);
+  }
+
+  @Override
+  public String toString() {
+    return "TYPE => TABLE_NUMBER, LIMIT => " + maxTables;
+  }
 }

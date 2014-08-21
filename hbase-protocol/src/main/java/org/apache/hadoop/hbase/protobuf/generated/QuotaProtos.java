@@ -3305,16 +3305,46 @@ public final class QuotaProtos {
     // optional .Throttle throttle = 2;
     /**
      * <code>optional .Throttle throttle = 2;</code>
+     *
+     * <pre>
+     * Throttle
+     * </pre>
      */
     boolean hasThrottle();
     /**
      * <code>optional .Throttle throttle = 2;</code>
+     *
+     * <pre>
+     * Throttle
+     * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle getThrottle();
     /**
      * <code>optional .Throttle throttle = 2;</code>
+     *
+     * <pre>
+     * Throttle
+     * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder getThrottleOrBuilder();
+
+    // optional uint32 max_tables = 3;
+    /**
+     * <code>optional uint32 max_tables = 3;</code>
+     *
+     * <pre>
+     * "Objects" Limits
+     * </pre>
+     */
+    boolean hasMaxTables();
+    /**
+     * <code>optional uint32 max_tables = 3;</code>
+     *
+     * <pre>
+     * "Objects" Limits
+     * </pre>
+     */
+    int getMaxTables();
   }
   /**
    * Protobuf type {@code Quotas}
@@ -3385,6 +3415,11 @@ public final class QuotaProtos {
               bitField0_ |= 0x00000002;
               break;
             }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              maxTables_ = input.readUInt32();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -3446,26 +3481,63 @@ public final class QuotaProtos {
     private org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle throttle_;
     /**
      * <code>optional .Throttle throttle = 2;</code>
+     *
+     * <pre>
+     * Throttle
+     * </pre>
      */
     public boolean hasThrottle() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
      * <code>optional .Throttle throttle = 2;</code>
+     *
+     * <pre>
+     * Throttle
+     * </pre>
      */
     public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle getThrottle() {
       return throttle_;
     }
     /**
      * <code>optional .Throttle throttle = 2;</code>
+     *
+     * <pre>
+     * Throttle
+     * </pre>
      */
     public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder getThrottleOrBuilder() {
       return throttle_;
     }
 
+    // optional uint32 max_tables = 3;
+    public static final int MAX_TABLES_FIELD_NUMBER = 3;
+    private int maxTables_;
+    /**
+     * <code>optional uint32 max_tables = 3;</code>
+     *
+     * <pre>
+     * "Objects" Limits
+     * </pre>
+     */
+    public boolean hasMaxTables() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional uint32 max_tables = 3;</code>
+     *
+     * <pre>
+     * "Objects" Limits
+     * </pre>
+     */
+    public int getMaxTables() {
+      return maxTables_;
+    }
+
     private void initFields() {
       bypassGlobals_ = false;
       throttle_ = org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.getDefaultInstance();
+      maxTables_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3491,6 +3563,9 @@ public final class QuotaProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeMessage(2, throttle_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, maxTables_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3507,6 +3582,10 @@ public final class QuotaProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(2, throttle_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, maxTables_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3541,6 +3620,11 @@ public final class QuotaProtos {
         result = result && getThrottle()
             .equals(other.getThrottle());
       }
+      result = result && (hasMaxTables() == other.hasMaxTables());
+      if (hasMaxTables()) {
+        result = result && (getMaxTables()
+            == other.getMaxTables());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -3561,6 +3645,10 @@ public final class QuotaProtos {
       if (hasThrottle()) {
         hash = (37 * hash) + THROTTLE_FIELD_NUMBER;
         hash = (53 * hash) + getThrottle().hashCode();
+      }
+      if (hasMaxTables()) {
+        hash = (37 * hash) + MAX_TABLES_FIELD_NUMBER;
+        hash = (53 * hash) + getMaxTables();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -3680,6 +3768,8 @@ public final class QuotaProtos {
           throttleBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
+        maxTables_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -3720,6 +3810,10 @@ public final class QuotaProtos {
         } else {
           result.throttle_ = throttleBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.maxTables_ = maxTables_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3741,6 +3835,9 @@ public final class QuotaProtos {
         }
         if (other.hasThrottle()) {
           mergeThrottle(other.getThrottle());
+        }
+        if (other.hasMaxTables()) {
+          setMaxTables(other.getMaxTables());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -3814,12 +3911,20 @@ public final class QuotaProtos {
           org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder> throttleBuilder_;
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public boolean hasThrottle() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle getThrottle() {
         if (throttleBuilder_ == null) {
@@ -3830,6 +3935,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public Builder setThrottle(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle value) {
         if (throttleBuilder_ == null) {
@@ -3846,6 +3955,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public Builder setThrottle(
           org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.Builder builderForValue) {
@@ -3860,6 +3973,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public Builder mergeThrottle(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle value) {
         if (throttleBuilder_ == null) {
@@ -3879,6 +3996,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public Builder clearThrottle() {
         if (throttleBuilder_ == null) {
@@ -3892,6 +4013,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.Builder getThrottleBuilder() {
         bitField0_ |= 0x00000002;
@@ -3900,6 +4025,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder getThrottleOrBuilder() {
         if (throttleBuilder_ != null) {
@@ -3910,6 +4039,10 @@ public final class QuotaProtos {
       }
       /**
        * <code>optional .Throttle throttle = 2;</code>
+       *
+       * <pre>
+       * Throttle
+       * </pre>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle.Builder, org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.ThrottleOrBuilder> 
@@ -3925,6 +4058,55 @@ public final class QuotaProtos {
         return throttleBuilder_;
       }
 
+      // optional uint32 max_tables = 3;
+      private int maxTables_ ;
+      /**
+       * <code>optional uint32 max_tables = 3;</code>
+       *
+       * <pre>
+       * "Objects" Limits
+       * </pre>
+       */
+      public boolean hasMaxTables() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint32 max_tables = 3;</code>
+       *
+       * <pre>
+       * "Objects" Limits
+       * </pre>
+       */
+      public int getMaxTables() {
+        return maxTables_;
+      }
+      /**
+       * <code>optional uint32 max_tables = 3;</code>
+       *
+       * <pre>
+       * "Objects" Limits
+       * </pre>
+       */
+      public Builder setMaxTables(int value) {
+        bitField0_ |= 0x00000004;
+        maxTables_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 max_tables = 3;</code>
+       *
+       * <pre>
+       * "Objects" Limits
+       * </pre>
+       */
+      public Builder clearMaxTables() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        maxTables_ = 0;
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:Quotas)
     }
 
@@ -3938,6 +4120,24 @@ public final class QuotaProtos {
 
   public interface QuotaUsageOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
+
+    // optional uint32 tables_created = 1 [default = 0];
+    /**
+     * <code>optional uint32 tables_created = 1 [default = 0];</code>
+     *
+     * <pre>
+     * "Objects" Usage
+     * </pre>
+     */
+    boolean hasTablesCreated();
+    /**
+     * <code>optional uint32 tables_created = 1 [default = 0];</code>
+     *
+     * <pre>
+     * "Objects" Usage
+     * </pre>
+     */
+    int getTablesCreated();
   }
   /**
    * Protobuf type {@code QuotaUsage}
@@ -3972,6 +4172,7 @@ public final class QuotaProtos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       initFields();
+      int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
       try {
@@ -3987,6 +4188,11 @@ public final class QuotaProtos {
                                      extensionRegistry, tag)) {
                 done = true;
               }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              tablesCreated_ = input.readUInt32();
               break;
             }
           }
@@ -4028,7 +4234,33 @@ public final class QuotaProtos {
       return PARSER;
     }
 
+    private int bitField0_;
+    // optional uint32 tables_created = 1 [default = 0];
+    public static final int TABLES_CREATED_FIELD_NUMBER = 1;
+    private int tablesCreated_;
+    /**
+     * <code>optional uint32 tables_created = 1 [default = 0];</code>
+     *
+     * <pre>
+     * "Objects" Usage
+     * </pre>
+     */
+    public boolean hasTablesCreated() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional uint32 tables_created = 1 [default = 0];</code>
+     *
+     * <pre>
+     * "Objects" Usage
+     * </pre>
+     */
+    public int getTablesCreated() {
+      return tablesCreated_;
+    }
+
     private void initFields() {
+      tablesCreated_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -4042,6 +4274,9 @@ public final class QuotaProtos {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt32(1, tablesCreated_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -4051,6 +4286,10 @@ public final class QuotaProtos {
       if (size != -1) return size;
 
       size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, tablesCreated_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
       return size;
@@ -4074,6 +4313,11 @@ public final class QuotaProtos {
       org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage other = (org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage) obj;
 
       boolean result = true;
+      result = result && (hasTablesCreated() == other.hasTablesCreated());
+      if (hasTablesCreated()) {
+        result = result && (getTablesCreated()
+            == other.getTablesCreated());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4087,6 +4331,10 @@ public final class QuotaProtos {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasTablesCreated()) {
+        hash = (37 * hash) + TABLES_CREATED_FIELD_NUMBER;
+        hash = (53 * hash) + getTablesCreated();
+      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -4196,6 +4444,8 @@ public final class QuotaProtos {
 
       public Builder clear() {
         super.clear();
+        tablesCreated_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
 
@@ -4222,6 +4472,13 @@ public final class QuotaProtos {
 
       public org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage result = new org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.tablesCreated_ = tablesCreated_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -4237,6 +4494,9 @@ public final class QuotaProtos {
 
       public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage other) {
         if (other == org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.QuotaUsage.getDefaultInstance()) return this;
+        if (other.hasTablesCreated()) {
+          setTablesCreated(other.getTablesCreated());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -4260,6 +4520,56 @@ public final class QuotaProtos {
             mergeFrom(parsedMessage);
           }
         }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional uint32 tables_created = 1 [default = 0];
+      private int tablesCreated_ ;
+      /**
+       * <code>optional uint32 tables_created = 1 [default = 0];</code>
+       *
+       * <pre>
+       * "Objects" Usage
+       * </pre>
+       */
+      public boolean hasTablesCreated() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional uint32 tables_created = 1 [default = 0];</code>
+       *
+       * <pre>
+       * "Objects" Usage
+       * </pre>
+       */
+      public int getTablesCreated() {
+        return tablesCreated_;
+      }
+      /**
+       * <code>optional uint32 tables_created = 1 [default = 0];</code>
+       *
+       * <pre>
+       * "Objects" Usage
+       * </pre>
+       */
+      public Builder setTablesCreated(int value) {
+        bitField0_ |= 0x00000001;
+        tablesCreated_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 tables_created = 1 [default = 0];</code>
+       *
+       * <pre>
+       * "Objects" Usage
+       * </pre>
+       */
+      public Builder clearTablesCreated() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        tablesCreated_ = 0;
+        onChanged();
         return this;
       }
 
@@ -4318,16 +4628,17 @@ public final class QuotaProtos {
       "a\022\035\n\010read_num\030\005 \001(\0132\013.TimedQuota\022\036\n\tread" +
       "_size\030\006 \001(\0132\013.TimedQuota\"P\n\017ThrottleRequ" +
       "est\022\033\n\004type\030\001 \001(\0162\r.ThrottleType\022 \n\013time",
-      "d_quota\030\002 \001(\0132\013.TimedQuota\"D\n\006Quotas\022\035\n\016" +
+      "d_quota\030\002 \001(\0132\013.TimedQuota\"X\n\006Quotas\022\035\n\016" +
       "bypass_globals\030\001 \001(\010:\005false\022\033\n\010throttle\030" +
-      "\002 \001(\0132\t.Throttle\"\014\n\nQuotaUsage*&\n\nQuotaS" +
-      "cope\022\013\n\007CLUSTER\020\001\022\013\n\007MACHINE\020\002*v\n\014Thrott" +
-      "leType\022\022\n\016REQUEST_NUMBER\020\001\022\020\n\014REQUEST_SI" +
-      "ZE\020\002\022\020\n\014WRITE_NUMBER\020\003\022\016\n\nWRITE_SIZE\020\004\022\017" +
-      "\n\013READ_NUMBER\020\005\022\r\n\tREAD_SIZE\020\006*\031\n\tQuotaT" +
-      "ype\022\014\n\010THROTTLE\020\001BA\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\013QuotaProtosH\001\210\001" +
-      "\001\240\001\001"
+      "\002 \001(\0132\t.Throttle\022\022\n\nmax_tables\030\003 \001(\r\"\'\n\n" +
+      "QuotaUsage\022\031\n\016tables_created\030\001 \001(\r:\0010*&\n" +
+      "\nQuotaScope\022\013\n\007CLUSTER\020\001\022\013\n\007MACHINE\020\002*v\n" +
+      "\014ThrottleType\022\022\n\016REQUEST_NUMBER\020\001\022\020\n\014REQ" +
+      "UEST_SIZE\020\002\022\020\n\014WRITE_NUMBER\020\003\022\016\n\nWRITE_S" +
+      "IZE\020\004\022\017\n\013READ_NUMBER\020\005\022\r\n\tREAD_SIZE\020\006*\031\n" +
+      "\tQuotaType\022\014\n\010THROTTLE\020\001BA\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\013QuotaPro",
+      "tosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4357,13 +4668,13 @@ public final class QuotaProtos {
           internal_static_Quotas_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Quotas_descriptor,
-              new java.lang.String[] { "BypassGlobals", "Throttle", });
+              new java.lang.String[] { "BypassGlobals", "Throttle", "MaxTables", });
           internal_static_QuotaUsage_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_QuotaUsage_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_QuotaUsage_descriptor,
-              new java.lang.String[] { });
+              new java.lang.String[] { "TablesCreated", });
           return null;
         }
       };
