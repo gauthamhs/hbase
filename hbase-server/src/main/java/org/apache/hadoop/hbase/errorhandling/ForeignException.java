@@ -138,6 +138,10 @@ public class ForeignException extends IOException {
    * @return protobuf serialized version of ForeignException
    */
   public static byte[] serialize(String source, Throwable t) {
+    return toProto(source, t).toByteArray();
+  }
+
+  public static ForeignExceptionMessage toProto(String source, Throwable t) {
     GenericExceptionMessage.Builder gemBuilder = GenericExceptionMessage.newBuilder();
     gemBuilder.setClassName(t.getClass().getName());
     if (t.getMessage() != null) {
@@ -152,8 +156,15 @@ public class ForeignException extends IOException {
     GenericExceptionMessage payload = gemBuilder.build();
     ForeignExceptionMessage.Builder exception = ForeignExceptionMessage.newBuilder();
     exception.setGenericException(payload).setSource(source);
-    ForeignExceptionMessage eem = exception.build();
-    return eem.toByteArray();
+    return exception.build();
+  }
+
+  public static ForeignException fromProto(final ForeignExceptionMessage eem) {
+    GenericExceptionMessage gem = eem.getGenericException();
+    StackTraceElement [] trace = ForeignException.toStackTrace(gem.getTraceList());
+    ProxyThrowable dfe = new ProxyThrowable(gem.getMessage(), trace);
+    ForeignException e = new ForeignException(eem.getSource(), dfe);
+    return e;
   }
 
   /**
@@ -165,11 +176,7 @@ public class ForeignException extends IOException {
   public static ForeignException deserialize(byte[] bytes) throws InvalidProtocolBufferException {
     // figure out the data we need to pass
     ForeignExceptionMessage eem = ForeignExceptionMessage.parseFrom(bytes);
-    GenericExceptionMessage gem = eem.getGenericException();
-    StackTraceElement [] trace = ForeignException.toStackTrace(gem.getTraceList());
-    ProxyThrowable dfe = new ProxyThrowable(gem.getMessage(), trace);
-    ForeignException e = new ForeignException(eem.getSource(), dfe);
-    return e;
+    return fromProto(eem);
   }
 
   /**
