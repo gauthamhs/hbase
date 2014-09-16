@@ -1955,8 +1955,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   public List<TableName> listTableNamesByNamespace(String name) throws IOException {
     List<TableName> tableNames = Lists.newArrayList();
     getNamespaceDescriptor(name); // check that namespace exists
-    for (HTableDescriptor descriptor: tableDescriptors.getByNamespace(name).values()) {
-      tableNames.add(descriptor.getTableName());
+    for (TableName table: tableStateManager.getTables()) {
+      if (table.getNamespaceAsString().equals(name)) {
+        tableNames.add(table);
+      }
     }
     return tableNames;
   }

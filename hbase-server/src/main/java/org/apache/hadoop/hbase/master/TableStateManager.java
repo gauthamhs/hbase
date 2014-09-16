@@ -159,6 +159,13 @@ public class TableStateManager {
   }
 
   /**
+   * Returns the set of tables in the cluster.
+   */
+  public Set<TableName> getTables() {
+    return tableStates.keySet();
+  }
+
+  /**
    * Return all tables in given states.
    *
    * @param states filter by states
