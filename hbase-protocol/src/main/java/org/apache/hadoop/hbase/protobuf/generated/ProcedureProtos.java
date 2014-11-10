@@ -126,6 +126,2820 @@ public final class ProcedureProtos {
     // @@protoc_insertion_point(enum_scope:ProcedureState)
   }
 
+  public interface StackTraceElementMessageOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional string declaring_class = 1;
+    /**
+     * <code>optional string declaring_class = 1;</code>
+     */
+    boolean hasDeclaringClass();
+    /**
+     * <code>optional string declaring_class = 1;</code>
+     */
+    java.lang.String getDeclaringClass();
+    /**
+     * <code>optional string declaring_class = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getDeclaringClassBytes();
+
+    // optional string method_name = 2;
+    /**
+     * <code>optional string method_name = 2;</code>
+     */
+    boolean hasMethodName();
+    /**
+     * <code>optional string method_name = 2;</code>
+     */
+    java.lang.String getMethodName();
+    /**
+     * <code>optional string method_name = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getMethodNameBytes();
+
+    // optional string file_name = 3;
+    /**
+     * <code>optional string file_name = 3;</code>
+     */
+    boolean hasFileName();
+    /**
+     * <code>optional string file_name = 3;</code>
+     */
+    java.lang.String getFileName();
+    /**
+     * <code>optional string file_name = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getFileNameBytes();
+
+    // optional int32 line_number = 4;
+    /**
+     * <code>optional int32 line_number = 4;</code>
+     */
+    boolean hasLineNumber();
+    /**
+     * <code>optional int32 line_number = 4;</code>
+     */
+    int getLineNumber();
+  }
+  /**
+   * Protobuf type {@code StackTraceElementMessage}
+   *
+   * <pre>
+   **
+   * Protobuf version of a java.lang.StackTraceElement
+   * so we can serialize exceptions.
+   * </pre>
+   */
+  public static final class StackTraceElementMessage extends
+      com.google.protobuf.GeneratedMessage
+      implements StackTraceElementMessageOrBuilder {
+    // Use StackTraceElementMessage.newBuilder() to construct.
+    private StackTraceElementMessage(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private StackTraceElementMessage(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final StackTraceElementMessage defaultInstance;
+    public static StackTraceElementMessage getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public StackTraceElementMessage getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private StackTraceElementMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              declaringClass_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              methodName_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              fileName_ = input.readBytes();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              lineNumber_ = input.readInt32();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StackTraceElementMessage_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StackTraceElementMessage_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<StackTraceElementMessage> PARSER =
+        new com.google.protobuf.AbstractParser<StackTraceElementMessage>() {
+      public StackTraceElementMessage parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new StackTraceElementMessage(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<StackTraceElementMessage> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional string declaring_class = 1;
+    public static final int DECLARING_CLASS_FIELD_NUMBER = 1;
+    private java.lang.Object declaringClass_;
+    /**
+     * <code>optional string declaring_class = 1;</code>
+     */
+    public boolean hasDeclaringClass() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string declaring_class = 1;</code>
+     */
+    public java.lang.String getDeclaringClass() {
+      java.lang.Object ref = declaringClass_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          declaringClass_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string declaring_class = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getDeclaringClassBytes() {
+      java.lang.Object ref = declaringClass_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        declaringClass_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string method_name = 2;
+    public static final int METHOD_NAME_FIELD_NUMBER = 2;
+    private java.lang.Object methodName_;
+    /**
+     * <code>optional string method_name = 2;</code>
+     */
+    public boolean hasMethodName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string method_name = 2;</code>
+     */
+    public java.lang.String getMethodName() {
+      java.lang.Object ref = methodName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          methodName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string method_name = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMethodNameBytes() {
+      java.lang.Object ref = methodName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        methodName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string file_name = 3;
+    public static final int FILE_NAME_FIELD_NUMBER = 3;
+    private java.lang.Object fileName_;
+    /**
+     * <code>optional string file_name = 3;</code>
+     */
+    public boolean hasFileName() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional string file_name = 3;</code>
+     */
+    public java.lang.String getFileName() {
+      java.lang.Object ref = fileName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          fileName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string file_name = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getFileNameBytes() {
+      java.lang.Object ref = fileName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        fileName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional int32 line_number = 4;
+    public static final int LINE_NUMBER_FIELD_NUMBER = 4;
+    private int lineNumber_;
+    /**
+     * <code>optional int32 line_number = 4;</code>
+     */
+    public boolean hasLineNumber() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional int32 line_number = 4;</code>
+     */
+    public int getLineNumber() {
+      return lineNumber_;
+    }
+
+    private void initFields() {
+      declaringClass_ = "";
+      methodName_ = "";
+      fileName_ = "";
+      lineNumber_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getDeclaringClassBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getMethodNameBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getFileNameBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeInt32(4, lineNumber_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getDeclaringClassBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getMethodNameBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getFileNameBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(4, lineNumber_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage other = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage) obj;
+
+      boolean result = true;
+      result = result && (hasDeclaringClass() == other.hasDeclaringClass());
+      if (hasDeclaringClass()) {
+        result = result && getDeclaringClass()
+            .equals(other.getDeclaringClass());
+      }
+      result = result && (hasMethodName() == other.hasMethodName());
+      if (hasMethodName()) {
+        result = result && getMethodName()
+            .equals(other.getMethodName());
+      }
+      result = result && (hasFileName() == other.hasFileName());
+      if (hasFileName()) {
+        result = result && getFileName()
+            .equals(other.getFileName());
+      }
+      result = result && (hasLineNumber() == other.hasLineNumber());
+      if (hasLineNumber()) {
+        result = result && (getLineNumber()
+            == other.getLineNumber());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasDeclaringClass()) {
+        hash = (37 * hash) + DECLARING_CLASS_FIELD_NUMBER;
+        hash = (53 * hash) + getDeclaringClass().hashCode();
+      }
+      if (hasMethodName()) {
+        hash = (37 * hash) + METHOD_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getMethodName().hashCode();
+      }
+      if (hasFileName()) {
+        hash = (37 * hash) + FILE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getFileName().hashCode();
+      }
+      if (hasLineNumber()) {
+        hash = (37 * hash) + LINE_NUMBER_FIELD_NUMBER;
+        hash = (53 * hash) + getLineNumber();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code StackTraceElementMessage}
+     *
+     * <pre>
+     **
+     * Protobuf version of a java.lang.StackTraceElement
+     * so we can serialize exceptions.
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StackTraceElementMessage_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StackTraceElementMessage_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        declaringClass_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        methodName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        fileName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        lineNumber_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StackTraceElementMessage_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage build() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage result = new org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.declaringClass_ = declaringClass_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.methodName_ = methodName_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.fileName_ = fileName_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.lineNumber_ = lineNumber_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.getDefaultInstance()) return this;
+        if (other.hasDeclaringClass()) {
+          bitField0_ |= 0x00000001;
+          declaringClass_ = other.declaringClass_;
+          onChanged();
+        }
+        if (other.hasMethodName()) {
+          bitField0_ |= 0x00000002;
+          methodName_ = other.methodName_;
+          onChanged();
+        }
+        if (other.hasFileName()) {
+          bitField0_ |= 0x00000004;
+          fileName_ = other.fileName_;
+          onChanged();
+        }
+        if (other.hasLineNumber()) {
+          setLineNumber(other.getLineNumber());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional string declaring_class = 1;
+      private java.lang.Object declaringClass_ = "";
+      /**
+       * <code>optional string declaring_class = 1;</code>
+       */
+      public boolean hasDeclaringClass() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string declaring_class = 1;</code>
+       */
+      public java.lang.String getDeclaringClass() {
+        java.lang.Object ref = declaringClass_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          declaringClass_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string declaring_class = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getDeclaringClassBytes() {
+        java.lang.Object ref = declaringClass_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          declaringClass_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string declaring_class = 1;</code>
+       */
+      public Builder setDeclaringClass(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        declaringClass_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string declaring_class = 1;</code>
+       */
+      public Builder clearDeclaringClass() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        declaringClass_ = getDefaultInstance().getDeclaringClass();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string declaring_class = 1;</code>
+       */
+      public Builder setDeclaringClassBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        declaringClass_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string method_name = 2;
+      private java.lang.Object methodName_ = "";
+      /**
+       * <code>optional string method_name = 2;</code>
+       */
+      public boolean hasMethodName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string method_name = 2;</code>
+       */
+      public java.lang.String getMethodName() {
+        java.lang.Object ref = methodName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          methodName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string method_name = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMethodNameBytes() {
+        java.lang.Object ref = methodName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          methodName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string method_name = 2;</code>
+       */
+      public Builder setMethodName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        methodName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string method_name = 2;</code>
+       */
+      public Builder clearMethodName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        methodName_ = getDefaultInstance().getMethodName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string method_name = 2;</code>
+       */
+      public Builder setMethodNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        methodName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string file_name = 3;
+      private java.lang.Object fileName_ = "";
+      /**
+       * <code>optional string file_name = 3;</code>
+       */
+      public boolean hasFileName() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional string file_name = 3;</code>
+       */
+      public java.lang.String getFileName() {
+        java.lang.Object ref = fileName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          fileName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string file_name = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getFileNameBytes() {
+        java.lang.Object ref = fileName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          fileName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string file_name = 3;</code>
+       */
+      public Builder setFileName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        fileName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string file_name = 3;</code>
+       */
+      public Builder clearFileName() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        fileName_ = getDefaultInstance().getFileName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string file_name = 3;</code>
+       */
+      public Builder setFileNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        fileName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional int32 line_number = 4;
+      private int lineNumber_ ;
+      /**
+       * <code>optional int32 line_number = 4;</code>
+       */
+      public boolean hasLineNumber() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional int32 line_number = 4;</code>
+       */
+      public int getLineNumber() {
+        return lineNumber_;
+      }
+      /**
+       * <code>optional int32 line_number = 4;</code>
+       */
+      public Builder setLineNumber(int value) {
+        bitField0_ |= 0x00000008;
+        lineNumber_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional int32 line_number = 4;</code>
+       */
+      public Builder clearLineNumber() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        lineNumber_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:StackTraceElementMessage)
+    }
+
+    static {
+      defaultInstance = new StackTraceElementMessage(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:StackTraceElementMessage)
+  }
+
+  public interface GenericExceptionMessageOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional string class_name = 1;
+    /**
+     * <code>optional string class_name = 1;</code>
+     */
+    boolean hasClassName();
+    /**
+     * <code>optional string class_name = 1;</code>
+     */
+    java.lang.String getClassName();
+    /**
+     * <code>optional string class_name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getClassNameBytes();
+
+    // optional string message = 2;
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    boolean hasMessage();
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    java.lang.String getMessage();
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getMessageBytes();
+
+    // optional bytes error_info = 3;
+    /**
+     * <code>optional bytes error_info = 3;</code>
+     */
+    boolean hasErrorInfo();
+    /**
+     * <code>optional bytes error_info = 3;</code>
+     */
+    com.google.protobuf.ByteString getErrorInfo();
+
+    // repeated .StackTraceElementMessage trace = 4;
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage> 
+        getTraceList();
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage getTrace(int index);
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    int getTraceCount();
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder> 
+        getTraceOrBuilderList();
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder getTraceOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code GenericExceptionMessage}
+   *
+   * <pre>
+   **
+   * Cause of a remote failure for a generic exception. Contains
+   * all the information for a generic exception as well as
+   * optional info about the error for generic info passing
+   * (which should be another protobuffed class).
+   * </pre>
+   */
+  public static final class GenericExceptionMessage extends
+      com.google.protobuf.GeneratedMessage
+      implements GenericExceptionMessageOrBuilder {
+    // Use GenericExceptionMessage.newBuilder() to construct.
+    private GenericExceptionMessage(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private GenericExceptionMessage(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final GenericExceptionMessage defaultInstance;
+    public static GenericExceptionMessage getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public GenericExceptionMessage getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private GenericExceptionMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              className_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              message_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              errorInfo_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                trace_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage>();
+                mutable_bitField0_ |= 0x00000008;
+              }
+              trace_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          trace_ = java.util.Collections.unmodifiableList(trace_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_GenericExceptionMessage_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_GenericExceptionMessage_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<GenericExceptionMessage> PARSER =
+        new com.google.protobuf.AbstractParser<GenericExceptionMessage>() {
+      public GenericExceptionMessage parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new GenericExceptionMessage(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<GenericExceptionMessage> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional string class_name = 1;
+    public static final int CLASS_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object className_;
+    /**
+     * <code>optional string class_name = 1;</code>
+     */
+    public boolean hasClassName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string class_name = 1;</code>
+     */
+    public java.lang.String getClassName() {
+      java.lang.Object ref = className_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          className_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string class_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getClassNameBytes() {
+      java.lang.Object ref = className_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        className_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional string message = 2;
+    public static final int MESSAGE_FIELD_NUMBER = 2;
+    private java.lang.Object message_;
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public boolean hasMessage() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          message_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string message = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional bytes error_info = 3;
+    public static final int ERROR_INFO_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString errorInfo_;
+    /**
+     * <code>optional bytes error_info = 3;</code>
+     */
+    public boolean hasErrorInfo() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bytes error_info = 3;</code>
+     */
+    public com.google.protobuf.ByteString getErrorInfo() {
+      return errorInfo_;
+    }
+
+    // repeated .StackTraceElementMessage trace = 4;
+    public static final int TRACE_FIELD_NUMBER = 4;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage> trace_;
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage> getTraceList() {
+      return trace_;
+    }
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder> 
+        getTraceOrBuilderList() {
+      return trace_;
+    }
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    public int getTraceCount() {
+      return trace_.size();
+    }
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage getTrace(int index) {
+      return trace_.get(index);
+    }
+    /**
+     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder getTraceOrBuilder(
+        int index) {
+      return trace_.get(index);
+    }
+
+    private void initFields() {
+      className_ = "";
+      message_ = "";
+      errorInfo_ = com.google.protobuf.ByteString.EMPTY;
+      trace_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getMessageBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, errorInfo_);
+      }
+      for (int i = 0; i < trace_.size(); i++) {
+        output.writeMessage(4, trace_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getClassNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getMessageBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, errorInfo_);
+      }
+      for (int i = 0; i < trace_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, trace_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage other = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage) obj;
+
+      boolean result = true;
+      result = result && (hasClassName() == other.hasClassName());
+      if (hasClassName()) {
+        result = result && getClassName()
+            .equals(other.getClassName());
+      }
+      result = result && (hasMessage() == other.hasMessage());
+      if (hasMessage()) {
+        result = result && getMessage()
+            .equals(other.getMessage());
+      }
+      result = result && (hasErrorInfo() == other.hasErrorInfo());
+      if (hasErrorInfo()) {
+        result = result && getErrorInfo()
+            .equals(other.getErrorInfo());
+      }
+      result = result && getTraceList()
+          .equals(other.getTraceList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasClassName()) {
+        hash = (37 * hash) + CLASS_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getClassName().hashCode();
+      }
+      if (hasMessage()) {
+        hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
+        hash = (53 * hash) + getMessage().hashCode();
+      }
+      if (hasErrorInfo()) {
+        hash = (37 * hash) + ERROR_INFO_FIELD_NUMBER;
+        hash = (53 * hash) + getErrorInfo().hashCode();
+      }
+      if (getTraceCount() > 0) {
+        hash = (37 * hash) + TRACE_FIELD_NUMBER;
+        hash = (53 * hash) + getTraceList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code GenericExceptionMessage}
+     *
+     * <pre>
+     **
+     * Cause of a remote failure for a generic exception. Contains
+     * all the information for a generic exception as well as
+     * optional info about the error for generic info passing
+     * (which should be another protobuffed class).
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_GenericExceptionMessage_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_GenericExceptionMessage_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getTraceFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        className_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        message_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        errorInfo_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        if (traceBuilder_ == null) {
+          trace_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+        } else {
+          traceBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_GenericExceptionMessage_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage build() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage result = new org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.className_ = className_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.message_ = message_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.errorInfo_ = errorInfo_;
+        if (traceBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+            trace_ = java.util.Collections.unmodifiableList(trace_);
+            bitField0_ = (bitField0_ & ~0x00000008);
+          }
+          result.trace_ = trace_;
+        } else {
+          result.trace_ = traceBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance()) return this;
+        if (other.hasClassName()) {
+          bitField0_ |= 0x00000001;
+          className_ = other.className_;
+          onChanged();
+        }
+        if (other.hasMessage()) {
+          bitField0_ |= 0x00000002;
+          message_ = other.message_;
+          onChanged();
+        }
+        if (other.hasErrorInfo()) {
+          setErrorInfo(other.getErrorInfo());
+        }
+        if (traceBuilder_ == null) {
+          if (!other.trace_.isEmpty()) {
+            if (trace_.isEmpty()) {
+              trace_ = other.trace_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+            } else {
+              ensureTraceIsMutable();
+              trace_.addAll(other.trace_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.trace_.isEmpty()) {
+            if (traceBuilder_.isEmpty()) {
+              traceBuilder_.dispose();
+              traceBuilder_ = null;
+              trace_ = other.trace_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+              traceBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getTraceFieldBuilder() : null;
+            } else {
+              traceBuilder_.addAllMessages(other.trace_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional string class_name = 1;
+      private java.lang.Object className_ = "";
+      /**
+       * <code>optional string class_name = 1;</code>
+       */
+      public boolean hasClassName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string class_name = 1;</code>
+       */
+      public java.lang.String getClassName() {
+        java.lang.Object ref = className_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          className_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string class_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getClassNameBytes() {
+        java.lang.Object ref = className_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          className_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string class_name = 1;</code>
+       */
+      public Builder setClassName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        className_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string class_name = 1;</code>
+       */
+      public Builder clearClassName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        className_ = getDefaultInstance().getClassName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string class_name = 1;</code>
+       */
+      public Builder setClassNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        className_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string message = 2;
+      private java.lang.Object message_ = "";
+      /**
+       * <code>optional string message = 2;</code>
+       */
+      public boolean hasMessage() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional string message = 2;</code>
+       */
+      public java.lang.String getMessage() {
+        java.lang.Object ref = message_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          message_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string message = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string message = 2;</code>
+       */
+      public Builder setMessage(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        message_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string message = 2;</code>
+       */
+      public Builder clearMessage() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        message_ = getDefaultInstance().getMessage();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string message = 2;</code>
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        message_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional bytes error_info = 3;
+      private com.google.protobuf.ByteString errorInfo_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes error_info = 3;</code>
+       */
+      public boolean hasErrorInfo() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bytes error_info = 3;</code>
+       */
+      public com.google.protobuf.ByteString getErrorInfo() {
+        return errorInfo_;
+      }
+      /**
+       * <code>optional bytes error_info = 3;</code>
+       */
+      public Builder setErrorInfo(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        errorInfo_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes error_info = 3;</code>
+       */
+      public Builder clearErrorInfo() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        errorInfo_ = getDefaultInstance().getErrorInfo();
+        onChanged();
+        return this;
+      }
+
+      // repeated .StackTraceElementMessage trace = 4;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage> trace_ =
+        java.util.Collections.emptyList();
+      private void ensureTraceIsMutable() {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+          trace_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage>(trace_);
+          bitField0_ |= 0x00000008;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder> traceBuilder_;
+
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage> getTraceList() {
+        if (traceBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(trace_);
+        } else {
+          return traceBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public int getTraceCount() {
+        if (traceBuilder_ == null) {
+          return trace_.size();
+        } else {
+          return traceBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage getTrace(int index) {
+        if (traceBuilder_ == null) {
+          return trace_.get(index);
+        } else {
+          return traceBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder setTrace(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage value) {
+        if (traceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureTraceIsMutable();
+          trace_.set(index, value);
+          onChanged();
+        } else {
+          traceBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder setTrace(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder builderForValue) {
+        if (traceBuilder_ == null) {
+          ensureTraceIsMutable();
+          trace_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          traceBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder addTrace(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage value) {
+        if (traceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureTraceIsMutable();
+          trace_.add(value);
+          onChanged();
+        } else {
+          traceBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder addTrace(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage value) {
+        if (traceBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureTraceIsMutable();
+          trace_.add(index, value);
+          onChanged();
+        } else {
+          traceBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder addTrace(
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder builderForValue) {
+        if (traceBuilder_ == null) {
+          ensureTraceIsMutable();
+          trace_.add(builderForValue.build());
+          onChanged();
+        } else {
+          traceBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder addTrace(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder builderForValue) {
+        if (traceBuilder_ == null) {
+          ensureTraceIsMutable();
+          trace_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          traceBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder addAllTrace(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage> values) {
+        if (traceBuilder_ == null) {
+          ensureTraceIsMutable();
+          super.addAll(values, trace_);
+          onChanged();
+        } else {
+          traceBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder clearTrace() {
+        if (traceBuilder_ == null) {
+          trace_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+          onChanged();
+        } else {
+          traceBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public Builder removeTrace(int index) {
+        if (traceBuilder_ == null) {
+          ensureTraceIsMutable();
+          trace_.remove(index);
+          onChanged();
+        } else {
+          traceBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder getTraceBuilder(
+          int index) {
+        return getTraceFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder getTraceOrBuilder(
+          int index) {
+        if (traceBuilder_ == null) {
+          return trace_.get(index);  } else {
+          return traceBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder> 
+           getTraceOrBuilderList() {
+        if (traceBuilder_ != null) {
+          return traceBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(trace_);
+        }
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder addTraceBuilder() {
+        return getTraceFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder addTraceBuilder(
+          int index) {
+        return getTraceFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder> 
+           getTraceBuilderList() {
+        return getTraceFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder> 
+          getTraceFieldBuilder() {
+        if (traceBuilder_ == null) {
+          traceBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StackTraceElementMessageOrBuilder>(
+                  trace_,
+                  ((bitField0_ & 0x00000008) == 0x00000008),
+                  getParentForChildren(),
+                  isClean());
+          trace_ = null;
+        }
+        return traceBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:GenericExceptionMessage)
+    }
+
+    static {
+      defaultInstance = new GenericExceptionMessage(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:GenericExceptionMessage)
+  }
+
+  public interface ProcedureExceptionMessageOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional string source = 1;
+    /**
+     * <code>optional string source = 1;</code>
+     */
+    boolean hasSource();
+    /**
+     * <code>optional string source = 1;</code>
+     */
+    java.lang.String getSource();
+    /**
+     * <code>optional string source = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getSourceBytes();
+
+    // optional .GenericExceptionMessage generic_exception = 2;
+    /**
+     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     */
+    boolean hasGenericException();
+    /**
+     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage getGenericException();
+    /**
+     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder();
+  }
+  /**
+   * Protobuf type {@code ProcedureExceptionMessage}
+   *
+   * <pre>
+   **
+   * Exception sent across the wire when a remote task needs
+   * to notify other tasks that it failed and why
+   * </pre>
+   */
+  public static final class ProcedureExceptionMessage extends
+      com.google.protobuf.GeneratedMessage
+      implements ProcedureExceptionMessageOrBuilder {
+    // Use ProcedureExceptionMessage.newBuilder() to construct.
+    private ProcedureExceptionMessage(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ProcedureExceptionMessage(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ProcedureExceptionMessage defaultInstance;
+    public static ProcedureExceptionMessage getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ProcedureExceptionMessage getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ProcedureExceptionMessage(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              source_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = genericException_.toBuilder();
+              }
+              genericException_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(genericException_);
+                genericException_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureExceptionMessage_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureExceptionMessage_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ProcedureExceptionMessage> PARSER =
+        new com.google.protobuf.AbstractParser<ProcedureExceptionMessage>() {
+      public ProcedureExceptionMessage parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ProcedureExceptionMessage(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ProcedureExceptionMessage> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional string source = 1;
+    public static final int SOURCE_FIELD_NUMBER = 1;
+    private java.lang.Object source_;
+    /**
+     * <code>optional string source = 1;</code>
+     */
+    public boolean hasSource() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional string source = 1;</code>
+     */
+    public java.lang.String getSource() {
+      java.lang.Object ref = source_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          source_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string source = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getSourceBytes() {
+      java.lang.Object ref = source_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        source_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional .GenericExceptionMessage generic_exception = 2;
+    public static final int GENERIC_EXCEPTION_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage genericException_;
+    /**
+     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     */
+    public boolean hasGenericException() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage getGenericException() {
+      return genericException_;
+    }
+    /**
+     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder() {
+      return genericException_;
+    }
+
+    private void initFields() {
+      source_ = "";
+      genericException_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getSourceBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, genericException_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getSourceBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, genericException_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage other = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage) obj;
+
+      boolean result = true;
+      result = result && (hasSource() == other.hasSource());
+      if (hasSource()) {
+        result = result && getSource()
+            .equals(other.getSource());
+      }
+      result = result && (hasGenericException() == other.hasGenericException());
+      if (hasGenericException()) {
+        result = result && getGenericException()
+            .equals(other.getGenericException());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasSource()) {
+        hash = (37 * hash) + SOURCE_FIELD_NUMBER;
+        hash = (53 * hash) + getSource().hashCode();
+      }
+      if (hasGenericException()) {
+        hash = (37 * hash) + GENERIC_EXCEPTION_FIELD_NUMBER;
+        hash = (53 * hash) + getGenericException().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ProcedureExceptionMessage}
+     *
+     * <pre>
+     **
+     * Exception sent across the wire when a remote task needs
+     * to notify other tasks that it failed and why
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureExceptionMessage_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureExceptionMessage_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getGenericExceptionFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        source_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (genericExceptionBuilder_ == null) {
+          genericException_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance();
+        } else {
+          genericExceptionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureExceptionMessage_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage build() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage result = new org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.source_ = source_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (genericExceptionBuilder_ == null) {
+          result.genericException_ = genericException_;
+        } else {
+          result.genericException_ = genericExceptionBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance()) return this;
+        if (other.hasSource()) {
+          bitField0_ |= 0x00000001;
+          source_ = other.source_;
+          onChanged();
+        }
+        if (other.hasGenericException()) {
+          mergeGenericException(other.getGenericException());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional string source = 1;
+      private java.lang.Object source_ = "";
+      /**
+       * <code>optional string source = 1;</code>
+       */
+      public boolean hasSource() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional string source = 1;</code>
+       */
+      public java.lang.String getSource() {
+        java.lang.Object ref = source_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          source_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string source = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getSourceBytes() {
+        java.lang.Object ref = source_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          source_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string source = 1;</code>
+       */
+      public Builder setSource(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        source_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string source = 1;</code>
+       */
+      public Builder clearSource() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        source_ = getDefaultInstance().getSource();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string source = 1;</code>
+       */
+      public Builder setSourceBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        source_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional .GenericExceptionMessage generic_exception = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage genericException_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder> genericExceptionBuilder_;
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public boolean hasGenericException() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage getGenericException() {
+        if (genericExceptionBuilder_ == null) {
+          return genericException_;
+        } else {
+          return genericExceptionBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public Builder setGenericException(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage value) {
+        if (genericExceptionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          genericException_ = value;
+          onChanged();
+        } else {
+          genericExceptionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public Builder setGenericException(
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder builderForValue) {
+        if (genericExceptionBuilder_ == null) {
+          genericException_ = builderForValue.build();
+          onChanged();
+        } else {
+          genericExceptionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public Builder mergeGenericException(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage value) {
+        if (genericExceptionBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              genericException_ != org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance()) {
+            genericException_ =
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.newBuilder(genericException_).mergeFrom(value).buildPartial();
+          } else {
+            genericException_ = value;
+          }
+          onChanged();
+        } else {
+          genericExceptionBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public Builder clearGenericException() {
+        if (genericExceptionBuilder_ == null) {
+          genericException_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.getDefaultInstance();
+          onChanged();
+        } else {
+          genericExceptionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder getGenericExceptionBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getGenericExceptionFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder() {
+        if (genericExceptionBuilder_ != null) {
+          return genericExceptionBuilder_.getMessageOrBuilder();
+        } else {
+          return genericException_;
+        }
+      }
+      /**
+       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder> 
+          getGenericExceptionFieldBuilder() {
+        if (genericExceptionBuilder_ == null) {
+          genericExceptionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.GenericExceptionMessageOrBuilder>(
+                  genericException_,
+                  getParentForChildren(),
+                  isClean());
+          genericException_ = null;
+        }
+        return genericExceptionBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ProcedureExceptionMessage)
+    }
+
+    static {
+      defaultInstance = new ProcedureExceptionMessage(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ProcedureExceptionMessage)
+  }
+
   public interface ProcedureOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -230,9 +3044,9 @@ public final class ProcedureProtos {
      */
     int getStackId(int index);
 
-    // optional .ForeignExceptionMessage exception = 9;
+    // optional .ProcedureExceptionMessage exception = 9;
     /**
-     * <code>optional .ForeignExceptionMessage exception = 9;</code>
+     * <code>optional .ProcedureExceptionMessage exception = 9;</code>
      *
      * <pre>
      * user state/results
@@ -240,21 +3054,21 @@ public final class ProcedureProtos {
      */
     boolean hasException();
     /**
-     * <code>optional .ForeignExceptionMessage exception = 9;</code>
+     * <code>optional .ProcedureExceptionMessage exception = 9;</code>
      *
      * <pre>
      * user state/results
      * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage getException();
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage getException();
     /**
-     * <code>optional .ForeignExceptionMessage exception = 9;</code>
+     * <code>optional .ProcedureExceptionMessage exception = 9;</code>
      *
      * <pre>
      * user state/results
      * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder getExceptionOrBuilder();
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder getExceptionOrBuilder();
 
     // optional bytes result = 10;
     /**
@@ -278,6 +3092,11 @@ public final class ProcedureProtos {
   }
   /**
    * Protobuf type {@code Procedure}
+   *
+   * <pre>
+   **
+   * Procedure metadata.
+   * </pre>
    */
   public static final class Procedure extends
       com.google.protobuf.GeneratedMessage
@@ -390,11 +3209,11 @@ public final class ProcedureProtos {
               break;
             }
             case 74: {
-              org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder subBuilder = null;
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder subBuilder = null;
               if (((bitField0_ & 0x00000080) == 0x00000080)) {
                 subBuilder = exception_.toBuilder();
               }
-              exception_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.PARSER, extensionRegistry);
+              exception_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.PARSER, extensionRegistry);
               if (subBuilder != null) {
                 subBuilder.mergeFrom(exception_);
                 exception_ = subBuilder.buildPartial();
@@ -629,11 +3448,11 @@ public final class ProcedureProtos {
       return stackId_.get(index);
     }
 
-    // optional .ForeignExceptionMessage exception = 9;
+    // optional .ProcedureExceptionMessage exception = 9;
     public static final int EXCEPTION_FIELD_NUMBER = 9;
-    private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage exception_;
+    private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage exception_;
     /**
-     * <code>optional .ForeignExceptionMessage exception = 9;</code>
+     * <code>optional .ProcedureExceptionMessage exception = 9;</code>
      *
      * <pre>
      * user state/results
@@ -643,23 +3462,23 @@ public final class ProcedureProtos {
       return ((bitField0_ & 0x00000080) == 0x00000080);
     }
     /**
-     * <code>optional .ForeignExceptionMessage exception = 9;</code>
+     * <code>optional .ProcedureExceptionMessage exception = 9;</code>
      *
      * <pre>
      * user state/results
      * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage getException() {
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage getException() {
       return exception_;
     }
     /**
-     * <code>optional .ForeignExceptionMessage exception = 9;</code>
+     * <code>optional .ProcedureExceptionMessage exception = 9;</code>
      *
      * <pre>
      * user state/results
      * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder getExceptionOrBuilder() {
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder getExceptionOrBuilder() {
       return exception_;
     }
 
@@ -704,7 +3523,7 @@ public final class ProcedureProtos {
       lastUpdate_ = 0L;
       timeout_ = 0;
       stackId_ = java.util.Collections.emptyList();
-      exception_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance();
+      exception_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance();
       result_ = com.google.protobuf.ByteString.EMPTY;
       stateData_ = com.google.protobuf.ByteString.EMPTY;
     }
@@ -1036,6 +3855,11 @@ public final class ProcedureProtos {
     }
     /**
      * Protobuf type {@code Procedure}
+     *
+     * <pre>
+     **
+     * Procedure metadata.
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
@@ -1090,7 +3914,7 @@ public final class ProcedureProtos {
         stackId_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000080);
         if (exceptionBuilder_ == null) {
-          exception_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance();
+          exception_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance();
         } else {
           exceptionBuilder_.clear();
         }
@@ -1646,12 +4470,12 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // optional .ForeignExceptionMessage exception = 9;
-      private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage exception_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance();
+      // optional .ProcedureExceptionMessage exception = 9;
+      private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage exception_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder> exceptionBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder> exceptionBuilder_;
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
@@ -1661,13 +4485,13 @@ public final class ProcedureProtos {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage getException() {
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage getException() {
         if (exceptionBuilder_ == null) {
           return exception_;
         } else {
@@ -1675,13 +4499,13 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
-      public Builder setException(org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage value) {
+      public Builder setException(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage value) {
         if (exceptionBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
@@ -1695,14 +4519,14 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
       public Builder setException(
-          org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder builderForValue) {
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder builderForValue) {
         if (exceptionBuilder_ == null) {
           exception_ = builderForValue.build();
           onChanged();
@@ -1713,18 +4537,18 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
-      public Builder mergeException(org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage value) {
+      public Builder mergeException(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage value) {
         if (exceptionBuilder_ == null) {
           if (((bitField0_ & 0x00000100) == 0x00000100) &&
-              exception_ != org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance()) {
+              exception_ != org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance()) {
             exception_ =
-              org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.newBuilder(exception_).mergeFrom(value).buildPartial();
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.newBuilder(exception_).mergeFrom(value).buildPartial();
           } else {
             exception_ = value;
           }
@@ -1736,7 +4560,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
@@ -1744,7 +4568,7 @@ public final class ProcedureProtos {
        */
       public Builder clearException() {
         if (exceptionBuilder_ == null) {
-          exception_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance();
+          exception_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.getDefaultInstance();
           onChanged();
         } else {
           exceptionBuilder_.clear();
@@ -1753,25 +4577,25 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder getExceptionBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder getExceptionBuilder() {
         bitField0_ |= 0x00000100;
         onChanged();
         return getExceptionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder getExceptionOrBuilder() {
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder getExceptionOrBuilder() {
         if (exceptionBuilder_ != null) {
           return exceptionBuilder_.getMessageOrBuilder();
         } else {
@@ -1779,18 +4603,18 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 9;</code>
+       * <code>optional .ProcedureExceptionMessage exception = 9;</code>
        *
        * <pre>
        * user state/results
        * </pre>
        */
       private com.google.protobuf.SingleFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder> 
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder> 
           getExceptionFieldBuilder() {
         if (exceptionBuilder_ == null) {
           exceptionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-              org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder>(
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureExceptionMessageOrBuilder>(
                   exception_,
                   getParentForChildren(),
                   isClean());
@@ -1927,6 +4751,11 @@ public final class ProcedureProtos {
   }
   /**
    * Protobuf type {@code ProcedureWALHeader}
+   *
+   * <pre>
+   **
+   * Procedure WAL header
+   * </pre>
    */
   public static final class ProcedureWALHeader extends
       com.google.protobuf.GeneratedMessage
@@ -2316,6 +5145,11 @@ public final class ProcedureProtos {
     }
     /**
      * Protobuf type {@code ProcedureWALHeader}
+     *
+     * <pre>
+     **
+     * Procedure WAL header
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
@@ -2643,6 +5477,11 @@ public final class ProcedureProtos {
   }
   /**
    * Protobuf type {@code ProcedureWALTrailer}
+   *
+   * <pre>
+   **
+   * Procedure WAL trailer
+   * </pre>
    */
   public static final class ProcedureWALTrailer extends
       com.google.protobuf.GeneratedMessage
@@ -2948,6 +5787,11 @@ public final class ProcedureProtos {
     }
     /**
      * Protobuf type {@code ProcedureWALTrailer}
+     *
+     * <pre>
+     **
+     * Procedure WAL trailer
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
@@ -3159,6 +6003,21 @@ public final class ProcedureProtos {
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_StackTraceElementMessage_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_StackTraceElementMessage_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_GenericExceptionMessage_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_GenericExceptionMessage_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ProcedureExceptionMessage_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ProcedureExceptionMessage_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_Procedure_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -3182,42 +6041,68 @@ public final class ProcedureProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017Procedure.proto\032\023ErrorHandling.proto\"\372" +
-      "\001\n\tProcedure\022\021\n\tclassName\030\001 \002(\t\022\020\n\010paren" +
-      "tId\030\002 \001(\004\022\016\n\006procId\030\003 \002(\004\022\036\n\005state\030\004 \002(\016" +
-      "2\017.ProcedureState\022\021\n\tstartTime\030\005 \002(\004\022\022\n\n" +
-      "lastUpdate\030\006 \002(\004\022\017\n\007timeout\030\007 \001(\r\022\017\n\007sta" +
-      "ckId\030\010 \003(\r\022+\n\texception\030\t \001(\0132\030.ForeignE" +
-      "xceptionMessage\022\016\n\006result\030\n \001(\014\022\022\n\nstate" +
-      "_data\030\013 \001(\014\"U\n\022ProcedureWALHeader\022\017\n\007ver" +
-      "sion\030\001 \002(\r\022\014\n\004type\030\002 \002(\r\022\r\n\005logId\030\003 \002(\004\022" +
-      "\021\n\tminProcId\030\004 \002(\004\":\n\023ProcedureWALTraile",
-      "r\022\017\n\007version\030\001 \002(\r\022\022\n\ntrackerPos\030\002 \002(\004*p" +
-      "\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010RU" +
-      "NNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEOUT" +
-      "\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*org." +
-      "apache.hadoop.hbase.protobuf.generatedB\017" +
-      "ProcedureProtosH\001\210\001\001\240\001\001"
+      "\n\017Procedure.proto\"p\n\030StackTraceElementMe" +
+      "ssage\022\027\n\017declaring_class\030\001 \001(\t\022\023\n\013method" +
+      "_name\030\002 \001(\t\022\021\n\tfile_name\030\003 \001(\t\022\023\n\013line_n" +
+      "umber\030\004 \001(\005\"|\n\027GenericExceptionMessage\022\022" +
+      "\n\nclass_name\030\001 \001(\t\022\017\n\007message\030\002 \001(\t\022\022\n\ne" +
+      "rror_info\030\003 \001(\014\022(\n\005trace\030\004 \003(\0132\031.StackTr" +
+      "aceElementMessage\"`\n\031ProcedureExceptionM" +
+      "essage\022\016\n\006source\030\001 \001(\t\0223\n\021generic_except" +
+      "ion\030\002 \001(\0132\030.GenericExceptionMessage\"\374\001\n\t" +
+      "Procedure\022\021\n\tclassName\030\001 \002(\t\022\020\n\010parentId",
+      "\030\002 \001(\004\022\016\n\006procId\030\003 \002(\004\022\036\n\005state\030\004 \002(\0162\017." +
+      "ProcedureState\022\021\n\tstartTime\030\005 \002(\004\022\022\n\nlas" +
+      "tUpdate\030\006 \002(\004\022\017\n\007timeout\030\007 \001(\r\022\017\n\007stackI" +
+      "d\030\010 \003(\r\022-\n\texception\030\t \001(\0132\032.ProcedureEx" +
+      "ceptionMessage\022\016\n\006result\030\n \001(\014\022\022\n\nstate_" +
+      "data\030\013 \001(\014\"U\n\022ProcedureWALHeader\022\017\n\007vers" +
+      "ion\030\001 \002(\r\022\014\n\004type\030\002 \002(\r\022\r\n\005logId\030\003 \002(\004\022\021" +
+      "\n\tminProcId\030\004 \002(\004\":\n\023ProcedureWALTrailer" +
+      "\022\017\n\007version\030\001 \002(\r\022\022\n\ntrackerPos\030\002 \002(\004*p\n" +
+      "\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010RUN",
+      "NABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEOUT\020" +
+      "\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*org.a" +
+      "pache.hadoop.hbase.protobuf.generatedB\017P" +
+      "rocedureProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_Procedure_descriptor =
+          internal_static_StackTraceElementMessage_descriptor =
             getDescriptor().getMessageTypes().get(0);
+          internal_static_StackTraceElementMessage_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_StackTraceElementMessage_descriptor,
+              new java.lang.String[] { "DeclaringClass", "MethodName", "FileName", "LineNumber", });
+          internal_static_GenericExceptionMessage_descriptor =
+            getDescriptor().getMessageTypes().get(1);
+          internal_static_GenericExceptionMessage_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_GenericExceptionMessage_descriptor,
+              new java.lang.String[] { "ClassName", "Message", "ErrorInfo", "Trace", });
+          internal_static_ProcedureExceptionMessage_descriptor =
+            getDescriptor().getMessageTypes().get(2);
+          internal_static_ProcedureExceptionMessage_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ProcedureExceptionMessage_descriptor,
+              new java.lang.String[] { "Source", "GenericException", });
+          internal_static_Procedure_descriptor =
+            getDescriptor().getMessageTypes().get(3);
           internal_static_Procedure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Procedure_descriptor,
               new java.lang.String[] { "ClassName", "ParentId", "ProcId", "State", "StartTime", "LastUpdate", "Timeout", "StackId", "Exception", "Result", "StateData", });
           internal_static_ProcedureWALHeader_descriptor =
-            getDescriptor().getMessageTypes().get(1);
+            getDescriptor().getMessageTypes().get(4);
           internal_static_ProcedureWALHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ProcedureWALHeader_descriptor,
               new java.lang.String[] { "Version", "Type", "LogId", "MinProcId", });
           internal_static_ProcedureWALTrailer_descriptor =
-            getDescriptor().getMessageTypes().get(2);
+            getDescriptor().getMessageTypes().get(5);
           internal_static_ProcedureWALTrailer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ProcedureWALTrailer_descriptor,
@@ -3228,7 +6113,6 @@ public final class ProcedureProtos {
     com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
-          org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.getDescriptor(),
         }, assigner);
   }
 

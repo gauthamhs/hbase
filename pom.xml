@@ -56,6 +56,7 @@
     <module>hbase-client</module>
     <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
+    <module>hbase-procedure</module>
     <module>hbase-it</module>
     <module>hbase-examples</module>
     <module>hbase-prefix-tree</module>
@@ -1104,6 +1105,11 @@
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-protocol</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-procedure</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
