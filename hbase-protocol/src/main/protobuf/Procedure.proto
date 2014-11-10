@@ -48,3 +48,15 @@ message Procedure {
   optional bytes result = 10;
   optional bytes state_data = 11;
 }
+
+message ProcedureWALHeader {
+  required uint32 version = 1;
+  required uint32 type = 2;
+  required uint64 logId = 3;
+  required uint64 minProcId = 4;
+}
+
+message ProcedureWALTrailer {
+  required uint32 version = 1;
+  required uint64 trackerPos = 2;
+}

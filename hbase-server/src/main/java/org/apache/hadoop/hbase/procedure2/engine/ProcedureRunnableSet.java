@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.engine;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -35,8 +35,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.engine.Procedure;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.util.ByteStringer;
 
 import com.google.protobuf.ByteString;
@@ -75,7 +76,7 @@ public class ProtobufProcedureStoreWAL extends BaseProcedureStoreWAL {
     ProcedureProtos.Procedure.Builder builder = ProcedureProtos.Procedure.newBuilder()
       .setClassName(proc.getClass().getName())
       .setProcId(proc.getProcId())
-      .setState(toProtoProcedureState(proc.getState()))
+      .setState(proc.getState())
       .setStartTime(proc.getStartTime())
       .setLastUpdate(proc.getLastUpdate());
 
@@ -136,7 +137,7 @@ public class ProtobufProcedureStoreWAL extends BaseProcedureStoreWAL {
     // set fields
     assert procId == proto.getProcId();
     proc.setProcId(procId);
-    proc.setState(toProcedureState(proto.getState()));
+    proc.setState(proto.getState());
     proc.setStartTime(proto.getStartTime());
     proc.setLastUpdate(proto.getLastUpdate());
 
@@ -165,29 +166,5 @@ public class ProtobufProcedureStoreWAL extends BaseProcedureStoreWAL {
     proc.deserializeStateData(proto.getStateData().newInput());
 
     return proc;
-  }
-
-  private static ProcedureProtos.ProcedureState toProtoProcedureState(final ProcedureState state) {
-    switch (state) {
-      case INITIALIZING:    return ProcedureProtos.ProcedureState.INITIALIZING;
-      case RUNNABLE:        return ProcedureProtos.ProcedureState.RUNNABLE;
-      case WAITING:         return ProcedureProtos.ProcedureState.WAITING;
-      case WAITING_TIMEOUT: return ProcedureProtos.ProcedureState.WAITING_TIMEOUT;
-      case ROLLEDBACK:      return ProcedureProtos.ProcedureState.ROLLEDBACK;
-      case FINISHED:        return ProcedureProtos.ProcedureState.FINISHED;
-    }
-    throw new RuntimeException("Invalid ProcedureState " + state);
-  }
-
-  private static ProcedureState toProcedureState(final ProcedureProtos.ProcedureState state) {
-    switch (state) {
-      case INITIALIZING:    return ProcedureState.INITIALIZING;
-      case RUNNABLE:        return ProcedureState.RUNNABLE;
-      case WAITING:         return ProcedureState.WAITING;
-      case WAITING_TIMEOUT: return ProcedureState.WAITING_TIMEOUT;
-      case ROLLEDBACK:      return ProcedureState.ROLLEDBACK;
-      case FINISHED:        return ProcedureState.FINISHED;
-    }
-    throw new RuntimeException("Invalid ProcedureState " + state);
   }
 }

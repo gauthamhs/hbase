@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.engine.Procedure;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

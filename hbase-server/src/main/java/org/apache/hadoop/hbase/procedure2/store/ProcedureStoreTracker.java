@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.engine.Procedure;
 import org.apache.hadoop.hbase.procedure2.util.CodingUtil;
 
 @InterfaceAudience.Public
@@ -292,7 +292,8 @@ public class ProcedureStoreTracker {
     }
   }
 
-  void setDeleted(final long procId, final boolean isDeleted) {
+  @InterfaceAudience.Private
+  public void setDeleted(final long procId, final boolean isDeleted) {
     if (procId < bitmapFirstId) return;
 
     adjustBitmap(procId);
@@ -317,7 +318,8 @@ public class ProcedureStoreTracker {
     }
   }
 
-  boolean isDeleted(final long procId) {
+  @InterfaceAudience.Private
+  public boolean isDeleted(final long procId) {
     if (procId < bitmapFirstId) {
       return true;
     }

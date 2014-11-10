@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.engine;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,7 +33,23 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 
+/**
+ * Base Procedure class responsible to handle the Procedure Metadata
+ * e.g. state, startTime, lastUpdate, stack-indexes, ...
+ *
+ * execute() is called each time the procedure is executed.
+ * it may be called multiple time in case of failure and restart, so the
+ * code must be idempotent.
+ * the return is a set of sub-procedures or null in case the procedure doesn't
+ * have sub-procedures. Once the sub-procedures are successfully completed
+ * the execute() method is called again.
+ *
+ * rollback() is called when the procedure or one of the sub-procedures is failed.
+ * the rollback step is supposed to cleanup the resources created during the
+ * execute() step.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Procedure {
@@ -72,13 +88,13 @@ public abstract class Procedure {
   }
 
   @InterfaceAudience.Private
-  Procedure[] doExecute() {
+  protected Procedure[] doExecute() {
     updateTimestamp();
     return execute();
   }
 
   @InterfaceAudience.Private
-  void doRollback() {
+  protected void doRollback() {
     rollback();
   }
 
@@ -147,12 +163,12 @@ public abstract class Procedure {
     this.lastUpdate = EnvironmentEdgeManager.currentTime();
   }
 
-  synchronized void setState(final ProcedureState state) {
+  public synchronized void setState(final ProcedureState state) {
     this.state = state;
     updateTimestamp();
   }
 
-  synchronized void setFailure(final ForeignException exception) {
+  public synchronized void setFailure(final ForeignException exception) {
     this.exception = exception;
     setState(ProcedureState.FINISHED);
   }
@@ -168,51 +184,82 @@ public abstract class Procedure {
     return false;
   }
 
+
   @InterfaceAudience.Private
-  void setProcId(final long procId) {
+  public void setProcId(final long procId) {
     this.procId = procId;
-    this.state = ProcedureState.RUNNABLE; // QUEUED?
+    this.state = ProcedureState.RUNNABLE;
     this.startTime = EnvironmentEdgeManager.currentTime();
     this.lastUpdate = startTime;
   }
 
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
   @InterfaceAudience.Private
-  void setTimeout(final int timeout) {
+  public void setTimeout(final int timeout) {
     this.timeout = timeout;
   }
 
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
   @InterfaceAudience.Private
-  void setStartTime(final long startTime) {
+  public void setStartTime(final long startTime) {
     this.startTime = startTime;
   }
 
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
   @InterfaceAudience.Private
-  void setLastUpdate(final long lastUpdate) {
+  public void setLastUpdate(final long lastUpdate) {
     this.lastUpdate = lastUpdate;
   }
 
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
   @InterfaceAudience.Private
-  void setParentProcId(final long parentProcId) {
+  public void setParentProcId(final long parentProcId) {
     this.parentProcId = parentProcId;
   }
 
+  /**
+   * Called by the ProcedureExecutor on procedure-load to restore the latch state
+   */
   @InterfaceAudience.Private
   synchronized void setChildrenLatch(final int numChildren) {
     this.childrenLatch = numChildren;
   }
 
+  /**
+   * Called by the ProcedureExecutor on procedure-load to restore the latch state
+   */
   @InterfaceAudience.Private
   void incChildrenLatch() {
     // TODO: can this be inferred from the stack? Jag tror det...
     this.childrenLatch++;
   }
 
+  /**
+   * Called by the ProcedureExecutor to notify that one of the sub-procedures
+   * has completed.
+   */
   @InterfaceAudience.Private
   synchronized boolean childrenCountDown() {
     assert childrenLatch > 0;
     return --childrenLatch == 0;
   }
 
+  /**
+   * Called by the ProcedureStack on procedure execution.
+   * Each procedure store its stack-index positions.
+   */
   @InterfaceAudience.Private
   void addStackIndex(final int index) {
     if (stackIndexes == null) {
@@ -225,8 +272,12 @@ public abstract class Procedure {
     }
   }
 
+  /**
+   * Called on store load to initialize the Procedure internals after
+   * the creation/deserialization.
+   */
   @InterfaceAudience.Private
-  void setStackIndexes(final List<Integer> stackIndexes) {
+  public void setStackIndexes(final List<Integer> stackIndexes) {
     this.stackIndexes = new int[stackIndexes.size()];
     for (int i = 0; i < this.stackIndexes.length; ++i) {
       this.stackIndexes[i] = stackIndexes.get(i);
@@ -239,11 +290,15 @@ public abstract class Procedure {
   }
 
   @InterfaceAudience.Private
-  int[] getStackIndexes() {
+  public int[] getStackIndexes() {
     return stackIndexes;
   }
 
-  public static Long getRootProcedureId(Map<Long, Procedure> procedures, Procedure proc) {
+  /*
+   * Helper to lookup the root Procedure ID given a specified procedure.
+   */
+  @InterfaceAudience.Private
+  static Long getRootProcedureId(final Map<Long, Procedure> procedures, final Procedure proc) {
     while (proc.hasParent()) {
       proc = procedures.get(proc.getParentProcId());
       if (proc == null) return null;

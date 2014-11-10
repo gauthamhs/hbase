@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.IOException;
 import java.io.FileNotFoundException;
@@ -41,11 +41,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureStore;
-import org.apache.hadoop.hbase.procedure2.ProcedureStoreTracker;
+import org.apache.hadoop.hbase.procedure2.engine.Procedure;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -447,9 +449,12 @@ public abstract class BaseProcedureStoreWAL implements ProcedureStore {
   }
 
   private boolean rollWriter(final long logId) {
-    ProcedureWALHeader header = new ProcedureWALHeader();
-    header.setMinProcId(storeTracker.getMinProcId());
-    header.setLogId(logId);
+    ProcedureWALHeader header = ProcedureWALHeader.newBuilder()
+      .setVersion(ProcedureWALFormat.HEADER_VERSION)
+      .setType(ProcedureWALFormat.LOG_TYPE_STREAM)
+      .setMinProcId(storeTracker.getMinProcId())
+      .setLogId(logId)
+      .build();
 
     FSDataOutputStream newStream = null;
     Path newLogFile = null;

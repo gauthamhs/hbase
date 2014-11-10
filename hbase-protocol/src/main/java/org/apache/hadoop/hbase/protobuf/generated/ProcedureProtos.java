@@ -1882,11 +1882,1297 @@ public final class ProcedureProtos {
     // @@protoc_insertion_point(class_scope:Procedure)
   }
 
+  public interface ProcedureWALHeaderOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required uint32 version = 1;
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    int getVersion();
+
+    // required uint32 type = 2;
+    /**
+     * <code>required uint32 type = 2;</code>
+     */
+    boolean hasType();
+    /**
+     * <code>required uint32 type = 2;</code>
+     */
+    int getType();
+
+    // required uint64 logId = 3;
+    /**
+     * <code>required uint64 logId = 3;</code>
+     */
+    boolean hasLogId();
+    /**
+     * <code>required uint64 logId = 3;</code>
+     */
+    long getLogId();
+
+    // required uint64 minProcId = 4;
+    /**
+     * <code>required uint64 minProcId = 4;</code>
+     */
+    boolean hasMinProcId();
+    /**
+     * <code>required uint64 minProcId = 4;</code>
+     */
+    long getMinProcId();
+  }
+  /**
+   * Protobuf type {@code ProcedureWALHeader}
+   */
+  public static final class ProcedureWALHeader extends
+      com.google.protobuf.GeneratedMessage
+      implements ProcedureWALHeaderOrBuilder {
+    // Use ProcedureWALHeader.newBuilder() to construct.
+    private ProcedureWALHeader(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ProcedureWALHeader(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ProcedureWALHeader defaultInstance;
+    public static ProcedureWALHeader getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ProcedureWALHeader getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ProcedureWALHeader(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              version_ = input.readUInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              type_ = input.readUInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              logId_ = input.readUInt64();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              minProcId_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ProcedureWALHeader> PARSER =
+        new com.google.protobuf.AbstractParser<ProcedureWALHeader>() {
+      public ProcedureWALHeader parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ProcedureWALHeader(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ProcedureWALHeader> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required uint32 version = 1;
+    public static final int VERSION_FIELD_NUMBER = 1;
+    private int version_;
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    public int getVersion() {
+      return version_;
+    }
+
+    // required uint32 type = 2;
+    public static final int TYPE_FIELD_NUMBER = 2;
+    private int type_;
+    /**
+     * <code>required uint32 type = 2;</code>
+     */
+    public boolean hasType() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required uint32 type = 2;</code>
+     */
+    public int getType() {
+      return type_;
+    }
+
+    // required uint64 logId = 3;
+    public static final int LOGID_FIELD_NUMBER = 3;
+    private long logId_;
+    /**
+     * <code>required uint64 logId = 3;</code>
+     */
+    public boolean hasLogId() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required uint64 logId = 3;</code>
+     */
+    public long getLogId() {
+      return logId_;
+    }
+
+    // required uint64 minProcId = 4;
+    public static final int MINPROCID_FIELD_NUMBER = 4;
+    private long minProcId_;
+    /**
+     * <code>required uint64 minProcId = 4;</code>
+     */
+    public boolean hasMinProcId() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required uint64 minProcId = 4;</code>
+     */
+    public long getMinProcId() {
+      return minProcId_;
+    }
+
+    private void initFields() {
+      version_ = 0;
+      type_ = 0;
+      logId_ = 0L;
+      minProcId_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasVersion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasType()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasLogId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasMinProcId()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt32(1, version_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt32(2, type_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt64(3, logId_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, minProcId_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, version_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(2, type_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(3, logId_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, minProcId_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader other = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader) obj;
+
+      boolean result = true;
+      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion()) {
+        result = result && (getVersion()
+            == other.getVersion());
+      }
+      result = result && (hasType() == other.hasType());
+      if (hasType()) {
+        result = result && (getType()
+            == other.getType());
+      }
+      result = result && (hasLogId() == other.hasLogId());
+      if (hasLogId()) {
+        result = result && (getLogId()
+            == other.getLogId());
+      }
+      result = result && (hasMinProcId() == other.hasMinProcId());
+      if (hasMinProcId()) {
+        result = result && (getMinProcId()
+            == other.getMinProcId());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasVersion()) {
+        hash = (37 * hash) + VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getVersion();
+      }
+      if (hasType()) {
+        hash = (37 * hash) + TYPE_FIELD_NUMBER;
+        hash = (53 * hash) + getType();
+      }
+      if (hasLogId()) {
+        hash = (37 * hash) + LOGID_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getLogId());
+      }
+      if (hasMinProcId()) {
+        hash = (37 * hash) + MINPROCID_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getMinProcId());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ProcedureWALHeader}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeaderOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        version_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        type_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        logId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
+        minProcId_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader build() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader result = new org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.version_ = version_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.type_ = type_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.logId_ = logId_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.minProcId_ = minProcId_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.getDefaultInstance()) return this;
+        if (other.hasVersion()) {
+          setVersion(other.getVersion());
+        }
+        if (other.hasType()) {
+          setType(other.getType());
+        }
+        if (other.hasLogId()) {
+          setLogId(other.getLogId());
+        }
+        if (other.hasMinProcId()) {
+          setMinProcId(other.getMinProcId());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasVersion()) {
+          
+          return false;
+        }
+        if (!hasType()) {
+          
+          return false;
+        }
+        if (!hasLogId()) {
+          
+          return false;
+        }
+        if (!hasMinProcId()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required uint32 version = 1;
+      private int version_ ;
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public int getVersion() {
+        return version_;
+      }
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public Builder setVersion(int value) {
+        bitField0_ |= 0x00000001;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        version_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // required uint32 type = 2;
+      private int type_ ;
+      /**
+       * <code>required uint32 type = 2;</code>
+       */
+      public boolean hasType() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required uint32 type = 2;</code>
+       */
+      public int getType() {
+        return type_;
+      }
+      /**
+       * <code>required uint32 type = 2;</code>
+       */
+      public Builder setType(int value) {
+        bitField0_ |= 0x00000002;
+        type_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint32 type = 2;</code>
+       */
+      public Builder clearType() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        type_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 logId = 3;
+      private long logId_ ;
+      /**
+       * <code>required uint64 logId = 3;</code>
+       */
+      public boolean hasLogId() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required uint64 logId = 3;</code>
+       */
+      public long getLogId() {
+        return logId_;
+      }
+      /**
+       * <code>required uint64 logId = 3;</code>
+       */
+      public Builder setLogId(long value) {
+        bitField0_ |= 0x00000004;
+        logId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 logId = 3;</code>
+       */
+      public Builder clearLogId() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        logId_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 minProcId = 4;
+      private long minProcId_ ;
+      /**
+       * <code>required uint64 minProcId = 4;</code>
+       */
+      public boolean hasMinProcId() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required uint64 minProcId = 4;</code>
+       */
+      public long getMinProcId() {
+        return minProcId_;
+      }
+      /**
+       * <code>required uint64 minProcId = 4;</code>
+       */
+      public Builder setMinProcId(long value) {
+        bitField0_ |= 0x00000008;
+        minProcId_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 minProcId = 4;</code>
+       */
+      public Builder clearMinProcId() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        minProcId_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ProcedureWALHeader)
+    }
+
+    static {
+      defaultInstance = new ProcedureWALHeader(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ProcedureWALHeader)
+  }
+
+  public interface ProcedureWALTrailerOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required uint32 version = 1;
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    int getVersion();
+
+    // required uint64 trackerPos = 2;
+    /**
+     * <code>required uint64 trackerPos = 2;</code>
+     */
+    boolean hasTrackerPos();
+    /**
+     * <code>required uint64 trackerPos = 2;</code>
+     */
+    long getTrackerPos();
+  }
+  /**
+   * Protobuf type {@code ProcedureWALTrailer}
+   */
+  public static final class ProcedureWALTrailer extends
+      com.google.protobuf.GeneratedMessage
+      implements ProcedureWALTrailerOrBuilder {
+    // Use ProcedureWALTrailer.newBuilder() to construct.
+    private ProcedureWALTrailer(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ProcedureWALTrailer(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ProcedureWALTrailer defaultInstance;
+    public static ProcedureWALTrailer getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ProcedureWALTrailer getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ProcedureWALTrailer(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              version_ = input.readUInt32();
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              trackerPos_ = input.readUInt64();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ProcedureWALTrailer> PARSER =
+        new com.google.protobuf.AbstractParser<ProcedureWALTrailer>() {
+      public ProcedureWALTrailer parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ProcedureWALTrailer(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ProcedureWALTrailer> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required uint32 version = 1;
+    public static final int VERSION_FIELD_NUMBER = 1;
+    private int version_;
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required uint32 version = 1;</code>
+     */
+    public int getVersion() {
+      return version_;
+    }
+
+    // required uint64 trackerPos = 2;
+    public static final int TRACKERPOS_FIELD_NUMBER = 2;
+    private long trackerPos_;
+    /**
+     * <code>required uint64 trackerPos = 2;</code>
+     */
+    public boolean hasTrackerPos() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required uint64 trackerPos = 2;</code>
+     */
+    public long getTrackerPos() {
+      return trackerPos_;
+    }
+
+    private void initFields() {
+      version_ = 0;
+      trackerPos_ = 0L;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasVersion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasTrackerPos()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt32(1, version_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(2, trackerPos_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(1, version_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(2, trackerPos_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer other = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer) obj;
+
+      boolean result = true;
+      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion()) {
+        result = result && (getVersion()
+            == other.getVersion());
+      }
+      result = result && (hasTrackerPos() == other.hasTrackerPos());
+      if (hasTrackerPos()) {
+        result = result && (getTrackerPos()
+            == other.getTrackerPos());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasVersion()) {
+        hash = (37 * hash) + VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getVersion();
+      }
+      if (hasTrackerPos()) {
+        hash = (37 * hash) + TRACKERPOS_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getTrackerPos());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ProcedureWALTrailer}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailerOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        version_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        trackerPos_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer build() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer result = new org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.version_ = version_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.trackerPos_ = trackerPos_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.getDefaultInstance()) return this;
+        if (other.hasVersion()) {
+          setVersion(other.getVersion());
+        }
+        if (other.hasTrackerPos()) {
+          setTrackerPos(other.getTrackerPos());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasVersion()) {
+          
+          return false;
+        }
+        if (!hasTrackerPos()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required uint32 version = 1;
+      private int version_ ;
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public int getVersion() {
+        return version_;
+      }
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public Builder setVersion(int value) {
+        bitField0_ |= 0x00000001;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint32 version = 1;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        version_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // required uint64 trackerPos = 2;
+      private long trackerPos_ ;
+      /**
+       * <code>required uint64 trackerPos = 2;</code>
+       */
+      public boolean hasTrackerPos() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required uint64 trackerPos = 2;</code>
+       */
+      public long getTrackerPos() {
+        return trackerPos_;
+      }
+      /**
+       * <code>required uint64 trackerPos = 2;</code>
+       */
+      public Builder setTrackerPos(long value) {
+        bitField0_ |= 0x00000002;
+        trackerPos_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required uint64 trackerPos = 2;</code>
+       */
+      public Builder clearTrackerPos() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        trackerPos_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ProcedureWALTrailer)
+    }
+
+    static {
+      defaultInstance = new ProcedureWALTrailer(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ProcedureWALTrailer)
+  }
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_Procedure_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_Procedure_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ProcedureWALHeader_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ProcedureWALHeader_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ProcedureWALTrailer_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ProcedureWALTrailer_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1903,11 +3189,15 @@ public final class ProcedureProtos {
       "lastUpdate\030\006 \002(\004\022\017\n\007timeout\030\007 \001(\r\022\017\n\007sta" +
       "ckId\030\010 \003(\r\022+\n\texception\030\t \001(\0132\030.ForeignE" +
       "xceptionMessage\022\016\n\006result\030\n \001(\014\022\022\n\nstate" +
-      "_data\030\013 \001(\014*p\n\016ProcedureState\022\020\n\014INITIAL" +
-      "IZING\020\001\022\014\n\010RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WA" +
-      "ITING_TIMEOUT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINIS",
-      "HED\020\006BE\n*org.apache.hadoop.hbase.protobu" +
-      "f.generatedB\017ProcedureProtosH\001\210\001\001\240\001\001"
+      "_data\030\013 \001(\014\"U\n\022ProcedureWALHeader\022\017\n\007ver" +
+      "sion\030\001 \002(\r\022\014\n\004type\030\002 \002(\r\022\r\n\005logId\030\003 \002(\004\022" +
+      "\021\n\tminProcId\030\004 \002(\004\":\n\023ProcedureWALTraile",
+      "r\022\017\n\007version\030\001 \002(\r\022\022\n\ntrackerPos\030\002 \002(\004*p" +
+      "\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010RU" +
+      "NNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEOUT" +
+      "\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*org." +
+      "apache.hadoop.hbase.protobuf.generatedB\017" +
+      "ProcedureProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -1920,6 +3210,18 @@ public final class ProcedureProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Procedure_descriptor,
               new java.lang.String[] { "ClassName", "ParentId", "ProcId", "State", "StartTime", "LastUpdate", "Timeout", "StackId", "Exception", "Result", "StateData", });
+          internal_static_ProcedureWALHeader_descriptor =
+            getDescriptor().getMessageTypes().get(1);
+          internal_static_ProcedureWALHeader_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ProcedureWALHeader_descriptor,
+              new java.lang.String[] { "Version", "Type", "LogId", "MinProcId", });
+          internal_static_ProcedureWALTrailer_descriptor =
+            getDescriptor().getMessageTypes().get(2);
+          internal_static_ProcedureWALTrailer_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ProcedureWALTrailer_descriptor,
+              new java.lang.String[] { "Version", "TrackerPos", });
           return null;
         }
       };

@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.procedure2;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.engine.Procedure;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class OnePhaseProcedure extends Procedure {
+  // TODO
 }

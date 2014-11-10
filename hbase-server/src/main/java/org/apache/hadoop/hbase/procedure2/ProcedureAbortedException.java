@@ -18,16 +18,25 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public enum ProcedureState {
-  INITIALIZING,
-  RUNNABLE,
-  WAITING,
-  WAITING_TIMEOUT,
-  ROLLEDBACK,
-  FINISHED,
+/**
+ * Thrown when a procedure is aborted
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public class ProcedureAbortedException extends ProcedureException {
+  /** default constructor */
+  public ProcedureAbortedException() {
+    super();
+  }
+
+  /**
+   * Constructor
+   * @param s message
+   */
+  public ProcedureAbortedException(String s) {
+    super(s);
+  }
 }

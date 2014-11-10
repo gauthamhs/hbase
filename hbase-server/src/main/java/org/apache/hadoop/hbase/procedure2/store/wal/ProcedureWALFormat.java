@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.procedure2;
+package org.apache.hadoop.hbase.procedure2.store.wal;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,10 +27,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureStoreTracker;
+import org.apache.hadoop.hbase.procedure2.engine.Procedure;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.CodingUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -75,26 +77,9 @@ public class ProcedureWALFormat {
     return reader.getProcedures();
   }
 
-  /*
-   *  +----------------------+
-   *  | version      - 1byte |
-   *  +----------------------+
-   *  | type         - 1byte |
-   *  +----------------------+
-   *  | logId        - vlong |
-   *  +----------------------+
-   *  | minProcId    - vlong |
-   *  +----------------------+
-   *  | HEADER_MAGIC - 8byte |
-   *  +----------------------+
-   */
   public static void writeHeader(OutputStream stream, ProcedureWALHeader header)
       throws IOException {
-    stream.write(HEADER_VERSION);
-    stream.write(header.getType());
-    CodingUtil.writeVInt(stream, header.getLogId());
-    CodingUtil.writeVInt(stream, header.getMinProcId());
-    CodingUtil.writeInt(stream, HEADER_MAGIC, 8);
+    header.writeDelimitedTo(stream);
   }
 
   /*
@@ -228,26 +213,17 @@ public class ProcedureWALFormat {
 
   public static ProcedureWALHeader readHeader(InputStream stream)
       throws IOException {
-    ProcedureWALHeader header = new ProcedureWALHeader();
-    int version = stream.read();
-    if (version < 0 || version != HEADER_VERSION) {
-      throw new IOException("Invalid Header version. got " + version +
+    ProcedureWALHeader header = ProcedureWALHeader.parseDelimitedFrom(stream);
+
+    if (header.getVersion() < 0 || header.getVersion() != HEADER_VERSION) {
+      throw new IOException("Invalid Header version. got " + header.getVersion() +
           " expected " + HEADER_VERSION);
     }
 
-    int type = stream.read();
-    if (type < 0 || type > LOG_TYPE_MAX_VALID) {
-      throw new IOException("Invalid header type. got " + type);
+    if (header.getType() < 0 || header.getType() > LOG_TYPE_MAX_VALID) {
+      throw new IOException("Invalid header type. got " + header.getType());
     }
 
-    header.setVersion(version);
-    header.setType(type);
-    header.setLogId(CodingUtil.readVLong(stream));
-    header.setMinProcId(CodingUtil.readVLong(stream));
-    long magic = CodingUtil.readLong(stream, 8);
-    if (magic != HEADER_MAGIC) {
-      throw new IOException("Invalid Header magic. got " + magic + " expected " + HEADER_MAGIC);
-    }
     return header;
   }
 
@@ -279,9 +255,10 @@ public class ProcedureWALFormat {
       throw new IOException("Invalid Trailer begin");
     }
 
-    ProcedureWALTrailer trailer = new ProcedureWALTrailer();
-    trailer.setVersion(version);
-    trailer.setTrackerPos(stream.getPos());
+    ProcedureWALTrailer trailer = ProcedureWALTrailer.newBuilder()
+      .setVersion(version)
+      .setTrackerPos(stream.getPos())
+      .build();
     return trailer;
   }
 }

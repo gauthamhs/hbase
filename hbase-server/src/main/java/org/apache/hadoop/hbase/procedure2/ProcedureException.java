@@ -18,28 +18,23 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public class ProcedureWALTrailer {
-  private long trackerPos;
-  private int version;
-
-  public void setVersion(final int version) {
-    this.version = version;
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public class ProcedureException extends HBaseIOException {
+  /** default constructor */
+  public ProcedureException() {
+    super();
   }
 
-  public int getVersion() {
-    return version;
-  }
-
-  public void setTrackerPos(final long trackerPos) {
-    this.trackerPos = trackerPos;
-  }
-
-  public long getTrackerPos() {
-    return trackerPos;
+  /**
+   * Constructor
+   * @param s message
+   */
+  public ProcedureException(String s) {
+    super(s);
   }
 }
