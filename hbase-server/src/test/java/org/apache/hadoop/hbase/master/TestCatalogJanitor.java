@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
+import org.apache.hadoop.hbase.procedure2.engine.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -242,6 +243,11 @@ public class TestCatalogJanitor {
 
     @Override
     public MasterQuotaManager getMasterQuotaManager() {
+      return null;
+    }
+
+    @Override
+    public ProcedureExecutor getMasterProcedureExecutor() {
       return null;
     }
 

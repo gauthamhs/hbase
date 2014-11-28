@@ -100,6 +100,8 @@ import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
+import org.apache.hadoop.hbase.procedure2.engine.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.store.wal.ProtobufProcedureStoreWAL;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -232,6 +234,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   private MasterQuotaManager quotaManager;
 
+  private ProcedureExecutor procedureExecutor;
+
   // handle table states
   private TableStateManager tableStateManager;
 
@@ -297,7 +301,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
 
     // Do we publish the status?
-    
+
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
     Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
@@ -875,6 +879,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    // Any time changing this maxThreads to > 1, pls see the comment at
    // AccessController#postCreateTableHandler
    this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
+   startProcedureExecutor();
 
    // Start log cleaner thread
    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
@@ -909,6 +914,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     super.stopServiceThreads();
     stopChores();
+    stopProcedureExecutor();
     // Wait for all the remaining region servers to report in IFF we were
     // running a cluster shutdown AND we were NOT aborting.
     if (!isAborted() && this.serverManager != null &&
@@ -927,6 +933,23 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.assignmentManager != null) this.assignmentManager.stop();
     if (this.fileSystemManager != null) this.fileSystemManager.stop();
     if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
+  }
+
+  private ProtobufProcedureStoreWAL procedureStore;
+  private void startProcedureExecutor() throws IOException { 
+    Path logDir = new Path(FSUtils.getRootDir(this.conf), "master-logs");
+    procedureStore = new ProtobufProcedureStoreWAL(
+        getMasterFileSystem().getFileSystem(), logDir);
+    procedureExecutor = new ProcedureExecutor(procedureStore);
+
+    int PROCEDURE_EXECUTOR_SLOTS = 1;
+    procedureStore.start(PROCEDURE_EXECUTOR_SLOTS);
+    procedureExecutor.start(PROCEDURE_EXECUTOR_SLOTS);
+  }
+
+  private void stopProcedureExecutor() {
+    procedureExecutor.stop();
+    procedureStore.stop();
   }
 
   private void stopChores() {
@@ -1683,6 +1706,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public MasterQuotaManager getMasterQuotaManager() {
     return quotaManager;
+  }
+
+  @Override
+  public ProcedureExecutor getMasterProcedureExecutor() {
+    return null;
   }
 
   @Override
