@@ -308,14 +308,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public HTableDescriptor[] listTables() throws IOException {
-   return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
-      @Override
-      public HTableDescriptor[] call(int callTimeout) throws ServiceException {
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest((List<TableName>)null);
-        return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
-      }
-    });
+    return listTables((Pattern)null, false);
   }
 
   /**
@@ -328,7 +321,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public HTableDescriptor[] listTables(Pattern pattern) throws IOException {
-    return this.connection.listTables(pattern.toString());
+    return listTables(pattern, false);
   }
 
   /**
@@ -341,7 +334,44 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public HTableDescriptor[] listTables(String regex) throws IOException {
-    return listTables(Pattern.compile(regex));
+    return listTables(Pattern.compile(regex), false);
+  }
+
+  /**
+   * List all the tables matching the given pattern.
+   *
+   * @param pattern The compiled regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return - returns an array of HTableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTables()
+   */
+  @Override
+  public HTableDescriptor[] listTables(final Pattern pattern, final boolean includeSysTables)
+      throws IOException {
+    return executeCallable(new MasterCallable<HTableDescriptor[]>(getConnection()) {
+      @Override
+      public HTableDescriptor[] call(int callTimeout) throws ServiceException {
+        GetTableDescriptorsRequest req =
+            RequestConverter.buildGetTableDescriptorsRequest(pattern, includeSysTables);
+        return ProtobufUtil.getHTableDescriptorArray(master.getTableDescriptors(null, req));
+      }
+    });
+  }
+
+  /**
+   * List all the tables matching the given pattern.
+   *
+   * @param regex The regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return - returns an array of HTableDescriptors
+   * @throws IOException if a remote or network exception occurs
+   * @see #listTables(java.util.regex.Pattern, boolean)
+   */
+  @Override
+  public HTableDescriptor[] listTables(String regex, boolean includeSysTables)
+      throws IOException {
+    return listTables(Pattern.compile(regex), includeSysTables);
   }
 
   /**
@@ -365,17 +395,16 @@ public class HBaseAdmin implements Admin {
    * @param pattern The regular expression to match against
    * @return String[] table names
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link Admin#listTables(Pattern)} instead.
+   * @deprecated Use {@link Admin#listTableNames(Pattern)} instead.
    */
   @Deprecated
   public String[] getTableNames(Pattern pattern) throws IOException {
-    List<String> matched = new ArrayList<String>();
-    for (String name: getTableNames()) {
-      if (pattern.matcher(name).matches()) {
-        matched.add(name);
-      }
+    TableName[] tableNames = listTableNames(pattern);
+    String result[] = new String[tableNames.length];
+    for (int i = 0; i < tableNames.length; i++) {
+      result[i] = tableNames[i].getNameAsString();
     }
-    return matched.toArray(new String[matched.size()]);
+    return result;
   }
 
   /**
@@ -383,7 +412,7 @@ public class HBaseAdmin implements Admin {
    * @param regex The regular expression to match against
    * @return String[] table names
    * @throws IOException if a remote or network exception occurs
-   * @deprecated Use {@link Admin#listTables(Pattern)} instead.
+   * @deprecated Use {@link Admin#listTableNames(Pattern)} instead.
    */
   @Deprecated
   public String[] getTableNames(String regex) throws IOException {
@@ -397,14 +426,63 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public TableName[] listTableNames() throws IOException {
+    return listTableNames((Pattern)null, false);
+  }
+
+  /**
+   * List all of the names of userspace tables.
+   * @param pattern The regular expression to match against
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public TableName[] listTableNames(Pattern pattern) throws IOException {
+    return listTableNames(pattern, false);
+  }
+
+  /**
+   * List all of the names of userspace tables.
+   * @param regex The regular expression to match against
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public TableName[] listTableNames(String regex) throws IOException {
+    return listTableNames(Pattern.compile(regex), false);
+  }
+
+  /**
+   * List all of the names of userspace tables.
+   * @param pattern The regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public TableName[] listTableNames(final Pattern pattern, final boolean includeSysTables)
+      throws IOException {
     return executeCallable(new MasterCallable<TableName[]>(getConnection()) {
       @Override
       public TableName[] call(int callTimeout) throws ServiceException {
-        return ProtobufUtil.getTableNameArray(master.getTableNames(null,
-          GetTableNamesRequest.newBuilder().build())
-        .getTableNamesList());
+        GetTableNamesRequest req =
+            RequestConverter.buildGetTableNamesRequest(pattern, includeSysTables);
+        return ProtobufUtil.getTableNameArray(master.getTableNames(null, req)
+            .getTableNamesList());
       }
     });
+  }
+
+  /**
+   * List all of the names of userspace tables.
+   * @param regex The regular expression to match against
+   * @param includeSysTables False to match only against userspace tables
+   * @return TableName[] table names
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public TableName[] listTableNames(final String regex, final boolean includeSysTables)
+      throws IOException {
+    return listTableNames(Pattern.compile(regex), includeSysTables);
   }
 
   /**
@@ -2669,7 +2747,7 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Roll the log writer. I.e. when using a file system based write ahead log, 
+   * Roll the log writer. I.e. when using a file system based write ahead log,
    * start writing log messages to a new file.
    *
    * Note that when talking to a version 1.0+ HBase deployment, the rolling is asynchronous.
