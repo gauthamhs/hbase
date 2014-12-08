@@ -93,6 +93,8 @@ public class TestMasterObserver {
     private boolean postDeleteNamespaceCalled;
     private boolean preModifyNamespaceCalled;
     private boolean postModifyNamespaceCalled;
+    private boolean preListNamespaceCalled;
+    private boolean postListNamespaceCalled;
     private boolean preAddColumnCalled;
     private boolean postAddColumnCalled;
     private boolean preModifyColumnCalled;
@@ -173,6 +175,8 @@ public class TestMasterObserver {
       postDeleteNamespaceCalled = false;
       preModifyNamespaceCalled = false;
       postModifyNamespaceCalled = false;
+      preListNamespaceCalled = false;
+      postListNamespaceCalled = false;
       preAddColumnCalled = false;
       postAddColumnCalled = false;
       preModifyColumnCalled = false;
@@ -392,6 +396,29 @@ public class TestMasterObserver {
 
     public boolean preModifyNamespaceCalledOnly() {
       return preModifyNamespaceCalled && !postModifyNamespaceCalled;
+    }
+
+    @Override
+    public void preListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> env,
+        List<NamespaceDescriptor> descriptors) throws IOException {
+      if (bypass) {
+        env.bypass();
+      }
+      preListNamespaceCalled = true;
+    }
+
+    @Override
+    public void postListNamespaceDescriptors(ObserverContext<MasterCoprocessorEnvironment> env,
+        List<NamespaceDescriptor> descriptors) throws IOException {
+      postListNamespaceCalled = true;
+    }
+
+    public boolean wasListNamespaceCalled() {
+      return preListNamespaceCalled && postListNamespaceCalled;
+    }
+
+    public boolean preListNamespaceCalledOnly() {
+      return preListNamespaceCalled && !postListNamespaceCalled;
     }
 
     @Override
@@ -1438,6 +1465,22 @@ public class TestMasterObserver {
 
     admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
     assertTrue("Test namespace should not be created", cp.preCreateNamespaceCalledOnly());
+
+    // turn on bypass, run the test
+    cp.enableBypass(true);
+    cp.resetStates();
+
+    admin.listNamespaceDescriptors();
+    assertTrue("post listNamespace should not have been called",
+               cp.preListNamespaceCalledOnly());
+
+    // turn off bypass, run the tests again
+    cp.enableBypass(false);
+    cp.resetStates();
+
+    admin.listNamespaceDescriptors();
+    assertTrue("post listNamespace should have been called",
+               cp.wasListNamespaceCalled());
   }
 
   private void modifyTableSync(Admin admin, TableName tableName, HTableDescriptor htd)
