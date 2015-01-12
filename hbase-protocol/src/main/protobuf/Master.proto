@@ -108,6 +108,7 @@ message CreateTableRequest {
 }
 
 message CreateTableResponse {
+  optional uint64 procId = 1;
 }
 
 message DeleteTableRequest {
@@ -115,6 +116,7 @@ message DeleteTableRequest {
 }
 
 message DeleteTableResponse {
+  optional uint64 procId = 1;
 }
 
 message TruncateTableRequest {

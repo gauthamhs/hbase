@@ -103,11 +103,16 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
+import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.DeleteTableProcedure;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.store.wal.FSProcedureStoreWAL;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
@@ -298,6 +303,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   MasterProcedureManagerHost mpmHost;
 
   private MasterQuotaManager quotaManager;
+
+  private ProcedureExecutor<MasterProcedureEnv> procedureExecutor;
+  private FSProcedureStoreWAL procedureStore;
 
   // handle table states
   private TableStateManager tableStateManager;
@@ -1008,6 +1016,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    // Any time changing this maxThreads to > 1, pls see the comment at
    // AccessController#postCreateTableHandler
    this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
+   startProcedureExecutor();
 
    // Start log cleaner thread
    int cleanerInterval = conf.getInt("hbase.master.cleaner.interval", 60 * 1000);
@@ -1040,6 +1049,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     super.stopServiceThreads();
     stopChores();
+    stopProcedureExecutor();
     // Wait for all the remaining region servers to report in IFF we were
     // running a cluster shutdown AND we were NOT aborting.
     if (!isAborted() && this.serverManager != null &&
@@ -1058,6 +1068,24 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.assignmentManager != null) this.assignmentManager.stop();
     if (this.fileSystemManager != null) this.fileSystemManager.stop();
     if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
+  }
+
+  private void startProcedureExecutor() throws IOException {
+    final String MASTER_PROCEDURE_LOGDIR = "MasterProcLogs";
+    final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
+    final Path logDir = new Path(FSUtils.getRootDir(this.conf), MASTER_PROCEDURE_LOGDIR);
+
+    procedureStore = new FSProcedureStoreWAL(getMasterFileSystem().getFileSystem(), logDir);
+    procedureExecutor = new ProcedureExecutor(procEnv, procedureStore, procEnv.getProcedureQueue());
+
+    int numExecutorSlots = conf.getInt("hbase.master.procedure.slots", 8);
+    procedureStore.start(numExecutorSlots);
+    procedureExecutor.start(numExecutorSlots);
+  }
+
+  private void stopProcedureExecutor() {
+    procedureExecutor.stop();
+    procedureStore.stop();
   }
 
   private void stopChores() {
@@ -1305,13 +1333,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
     LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
-    this.service.submit(new CreateTableHandler(this,
-      this.fileSystemManager, hTableDescriptor, conf,
-      newRegions, this).prepare());
+
+    long procId = this.procedureExecutor.submitProcedure(
+      new CreateTableProcedure(procedureExecutor.getEnvironment(),
+        hTableDescriptor, newRegions));
+
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
 
+    // TODO: change the interface to return the procId,
+    //       and add it to the response protobuf.
+    //return procId;
   }
 
   /**
@@ -1552,10 +1585,17 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       cpHost.preDeleteTable(tableName);
     }
     LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
-    this.service.submit(new DeleteTableHandler(tableName, this, this).prepare());
+
+    long procId = this.procedureExecutor.submitProcedure(
+        new DeleteTableProcedure(tableName));
+
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
     }
+
+    // TODO: change the interface to return the procId,
+    //       and add it to the response protobuf.
+    //return procId;
   }
 
   @Override
@@ -1852,6 +1892,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public MasterQuotaManager getMasterQuotaManager() {
     return quotaManager;
+  }
+
+  @Override
+  public ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
+    return procedureExecutor;
   }
 
   @Override
